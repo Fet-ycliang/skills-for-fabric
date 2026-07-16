@@ -4,6 +4,20 @@ User-facing changes for the public Microsoft Fabric Skills release.
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-07-16
+
+### Added
+- **Public issue routing** -- the public repository now provides dedicated bug and feature issue forms with a required owner-area selector and automatic `area:<slug>` labeling.
+
+### Changed
+- **Installation and update guidance** -- the public README now clarifies the scope of the main and focused plugin bundles and documents both per-bundle updates and `copilot plugin update --all`.
+- **Skill routing boundaries** -- improved selection across catalog search, Dataflows Gen1 save-as, Spark authoring/consumption/operations, Warehouse SQL, MLV operations, and end-to-end medallion prompts. Ad hoc Livy session execution now routes to `spark-consumption-cli`.
+- **`eventstream-authoring-cli`** -- user-defined topology node names now require alphanumeric PascalCase; the platform-generated `DefaultStream` naming exception is documented.
+
+### Fixed
+- **`dataflows-authoring-cli`** -- connector capability answers now use the tenant's live `supportedConnectionTypes` endpoint, and completion summaries identify the actual definition persist endpoint used.
+- **`dataflows-save-as-authoring-cli`** -- readiness output now consistently uses the canonical `Save-As Readiness Snapshot` heading.
+
 ## [0.3.7] - 2026-07-09
 
 ### Added
