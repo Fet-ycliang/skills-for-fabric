@@ -10,7 +10,7 @@ Add the public marketplace:
 /plugin marketplace add microsoft/skills-for-fabric
 ```
 
-Install the full bundle (except `powerbi-authoring`):
+Install the main Fabric bundle. Power BI report authoring is packaged separately:
 
 ```bash
 /plugin install fabric-skills@fabric-collection
@@ -32,12 +32,20 @@ Or install a focused bundle:
 /plugin install powerbi-authoring@fabric-collection
 ```
 
-You can also filter the full bundle by workload:
+Copilot CLI installs plugins as complete bundles. To limit installed skills, choose a focused bundle instead of filtering the full bundle.
+
+### Update installed plugins
+
+Update one installed bundle:
 
 ```bash
-/plugin install fabric-skills@fabric-collection --filter "sqldw-*"
-/plugin install fabric-skills@fabric-collection --filter "spark-*"
-/plugin install fabric-skills@fabric-collection --filter "eventhouse-*"
+/plugin update fabric-skills@fabric-collection
+```
+
+Replace `fabric-skills` with the focused bundle name to update that bundle. From a terminal, update every installed plugin with:
+
+```bash
+copilot plugin update --all
 ```
 
 ## What is included
