@@ -6,7 +6,7 @@ Queries a KQL database (Eventhouse or ADX/Kusto cluster) on a configurable sched
 
 > **Time-axis default:** If the query results include a reasonable datetime column, always configure `eventTimeSettings` and `queryParameters` so the source runs with a time axis. Only fall back to **snapshot mode** when the underlying data has no reasonable timestamp column and each row represents the latest state.
 
-> **Validate first:** Before creating or updating the Activator, run the KQL directly against the target KQL source and confirm the returned columns, timestamp field, and row shape are correct.
+> **Validate first:** Before creating or updating the Activator, run the KQL directly against the target KQL source and confirm the returned columns, timestamp field, and row shape are correct. If the query returns **no rows** (or the table/column does not exist), treat the source as **missing** -- stop and ask for the correct source and fields rather than authoring against an empty source. If the user explicitly instructs authoring against a future / not-yet-emitting source, state that assumption and continue without claiming rows were observed.
 
 ```json
 {

@@ -125,15 +125,15 @@ environment = dbutils.widgets.get("environment")
 
 # AFTER — Fabric: use a "parameters" tagged cell
 # Tag the cell below as "parameters" in the notebook UI
+# Pipeline Base parameters or parent-notebook arguments override these defaults
+# by injecting the runtime values into a generated cell.
 batch_date = "2024-01-01"   # overridden by pipeline or parent notebook at runtime
 environment = "dev"
-
-# Read pipeline-injected values programmatically (if needed):
-ctx = notebookutils.runtime.context
-params = ctx.get("parameters", {})
-batch_date = params.get("batch_date", "2024-01-01")
-environment = params.get("environment", "dev")
 ```
+
+`notebookutils.runtime.context` contains execution metadata such as workspace,
+notebook, activity, and user identifiers. It does **not** store notebook
+parameter values; use the variables overridden from the marked parameters cell.
 
 ---
 

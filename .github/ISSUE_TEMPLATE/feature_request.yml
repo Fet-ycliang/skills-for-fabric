@@ -33,6 +33,7 @@ body:
         - Ananke / FabricIQ (Power BI data exploration)
         - Power BI Reports
         - Fabric IQ / Ontology
+        - Azure Monitor into Fabric
         - Infrastructure / repo / CI / general (or not sure)
     validations:
       required: true

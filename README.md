@@ -48,6 +48,37 @@ Replace `fabric-skills` with the focused bundle name to update that bundle. From
 copilot plugin update --all
 ```
 
+### Automatic update checking
+
+Installed Fabric bundles include a non-blocking `check-updates` skill. The first
+Fabric skill invoked in a session detects the marketplace plugin, direct plugin,
+or positively identified skills-for-fabric Git clone that supplied it. When a
+network check is due, it reads the version and changelog from the same repository
+`main` ref and shows update guidance verified for the current agent host without
+executing it.
+
+Automatic network checks run at most once every seven UTC days per installed
+plugin or clone. An explicit check bypasses that cache. If the installation or
+remote version cannot be resolved safely, skill use continues without guessing.
+
+For loose skills copied or materialized from a file or URL, the automatic check
+does not prompt. Run `check-updates` explicitly to confirm whether the files came
+from `microsoft/skills-for-fabric`. After confirmation, it can inspect the public
+marketplace and offer a complete matching plugin bundle; it does not overwrite
+individual copied files.
+
+Plugin guidance is host-aware: GitHub Copilot CLI and Claude Code receive their
+own verified commands. Cursor and other hosts receive documented UI or repository
+guidance instead of a command from a different tool.
+
+```bash
+# Focused consumption bundle
+/fabric-consumption:check-updates
+
+# Full bundle
+/fabric-skills:check-updates
+```
+
 ## What is included
 
 | Bundle | Use it for |

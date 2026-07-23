@@ -104,6 +104,9 @@ https://learn.microsoft.com/en-us/rest/api/fabric/articles/
   - Consumption skill: `skills/eventhouse-consumption-cli/SKILL.md` — read-only KQL queries, schema discovery
   - Primary CLI tool: `az rest` via Kusto REST API (`/v1/rest/query` and `/v1/rest/mgmt`)
   - Token audience: `https://kusto.kusto.windows.net/.default`
+- **Azure Monitor Observability (into Fabric)**: Onboard Azure Monitor / Application Insights / Log Analytics telemetry into Fabric and correlate it with business data for business-impact insights
+  - Docs: https://learn.microsoft.com/en-us/azure/azure-monitor/overview
+  - Operations skill: `skills/azmon-mirroredcatalogs-operations-cli/SKILL.md` — onboard Azure Monitor / App Insights / Log Analytics observability data into Fabric, correlate telemetry with business data, and generate Operations Agent instructions
 
 ### OneLake Catalog Search
 - **Catalog Search API**: Cross-workspace item discovery

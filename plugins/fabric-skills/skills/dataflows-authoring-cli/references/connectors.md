@@ -27,18 +27,28 @@ All functions below have their symbol registered in the Fabric mashup engine (`V
 | `Snowflake.Databases`, `AzureStorage.DataLake`, `Excel.Workbook` | 🔑 Symbol present; not exercised end-to-end here |
 | `Html.Table`, `Csv.Document`, `Json.Document`, `Lines.FromBinary`, `#table` | ✅ Pure parsers — no binding — see [Pure-data parsers](#pure-data-parsers) |
 | `Variable.Value` | 🔑 Symbol present; requires a Variable Library on the dataflow — see [Variable.Value](#variablevalue) |
-| `Web.Page`, `Web.BrowserContents` | ❌ Disabled at runtime — see [Runtime-disabled functions](#runtime-disabled-functions) |
+| `Web.Page`, `Web.BrowserContents` | Gateway-backed in cloud dataflows; disabled in the direct `executeQuery` runtime tested here - see [Browser functions and gateway scope](#browser-functions-and-gateway-scope) |
 
 Full enumeration at runtime via [`#shared`](#shared).
 
-## Runtime-disabled functions
+## Browser functions and gateway scope
+
+Microsoft Learn documents `Web.Page` and `Web.BrowserContents` as available in
+cloud dataflows through an on-premises data gateway. See
+[Using a gateway with the Web connector](https://learn.microsoft.com/en-us/power-query/connectors/web/web-troubleshoot#using-a-gateway-with-the-web-connector).
+
+The direct, gateway-free `executeQuery` runtime probed for this skill returned
+the following errors, even for inline literals:
 
 | Function | Verbatim engine error |
 |---|---|
 | `Web.BrowserContents` | `The module named 'WebBrowserContents' has been disabled in this context.` |
 | `Web.Page` | `The module named 'Html' has been disabled in this context.` |
 
-Both fail even on inline literals (no network or credential dependency). For HTML parsing in Fabric Dataflow Gen2 use [`Html.Table`](#pure-data-parsers) — different module, fully enabled.
+For gateway-free authoring and preview, use `Web.Contents` plus
+[`Html.Table`](#pure-data-parsers). If browser rendering is required, use a
+gateway-backed Web connection and validate through the supported cloud-dataflow
+path rather than direct `executeQuery`.
 
 ## Lakehouse navigation
 
@@ -220,7 +230,7 @@ Without it the privacy firewall blocks evaluation when two or more sources are r
 ### MUST
 
 1. **Match the M function kind to the binding kind.** REST casing differs (REST `"SQL"` ↔ M `Sql.Database`) — see [connection-management.md § Step 1](connection-management.md#step-1--list-supported-connection-types).
-2. **Use `Html.Table` for HTML parsing.** `Web.Page` and `Web.BrowserContents` are disabled at runtime.
+2. **Use `Html.Table` for gateway-free HTML parsing.** `Web.Page` and `Web.BrowserContents` require an on-premises gateway in cloud dataflows and are disabled in the direct `executeQuery` runtime tested here.
 3. **For combined-source documents, add `[AllowCombine = true]`** before `section Section1;`.
 4. **Decode the Arrow stream and inspect `PQ Arrow Metadata`** when reading `executeQuery` results — 200 OK is not success.
 
@@ -232,8 +242,8 @@ Without it the privacy firewall blocks evaluation when two or more sources are r
 
 ### AVOID
 
-1. **`Web.BrowserContents`** — `module 'WebBrowserContents' has been disabled`.
-2. **`Web.Page`** — `module 'Html' has been disabled`.
+1. **`Web.BrowserContents` in direct `executeQuery`** - use a gateway-backed Web connection when browser rendering is required.
+2. **`Web.Page` in direct `executeQuery`** - use a gateway-backed Web connection when the legacy browser function is required.
 3. **`Sql.Database("server")`** (1-arg form) — engine rejects with arity error. Always supply the database name.
 4. **`{[Id="Tables"]}` at the lakehouse-`[Data]` level** — there is no `Tables` folder; tables are listed directly. (`{[Id="Files"]}` IS valid — it's the only folder entry.)
 

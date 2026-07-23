@@ -6,7 +6,7 @@ Queries an existing **Digital Twin Builder** or **Ontology** Fabric item on a sc
 
 > **Time-axis default:** If the DTB query results include a reasonable datetime field, prefer `eventTimeSettings` plus `DURATION_START` / `DURATION_END` query parameters. Only use snapshot mode when the query returns current-state rows with no reasonable event-time field.
 
-> **Validate first:** Before creating or updating the Activator, run the DTB / Ontology query directly first and confirm the returned columns, key fields, and timestamp field are correct.
+> **Validate first:** Before creating or updating the Activator, run the DTB / Ontology query directly first and confirm the returned columns, key fields, timestamp field, requested signal field, and at least one representative row are correct. If the query returns no rows or the requested field is missing, treat the source as missing and ask for the correct source and fields rather than authoring against an empty source. If the user explicitly instructs authoring against a future / not-yet-emitting source, state that assumption and continue without claiming rows were observed.
 
 ```json
 {
