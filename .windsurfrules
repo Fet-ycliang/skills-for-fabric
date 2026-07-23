@@ -64,6 +64,10 @@ rules:
     description: Use mlv-operations-cli for MLV refresh scheduling, job monitoring, and cancellation
     reference: skills/mlv-operations-cli/SKILL.md
 
+  - name: azmon_operations
+    description: Use azmon-mirroredcatalogs-operations-cli to onboard Azure Monitor / App Insights / Log Analytics observability data into Fabric and correlate telemetry with business data for business-impact insights and Operations Agent instructions
+    reference: skills/azmon-mirroredcatalogs-operations-cli/SKILL.md
+
   # Dataflows Gen2 (Data Integration)
   - name: dataflows_skills
     description: Authoring skill is dataflows-authoring-cli, consumption skill is dataflows-consumption-cli

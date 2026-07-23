@@ -37,6 +37,12 @@ Every entity in `ReflexEntities.json`:
 | `payload` | object | yes | Entity-specific configuration |
 | `type` | string | yes | Entity type (see below) |
 
+## Reference Integrity Preflight
+
+Before submitting `updateDefinition`, validate the full `ReflexEntities.json` array, not just the entity you changed. Every `parentContainer.targetUniqueIdentifier`, `parentObject.targetUniqueIdentifier`, `SourceReference.entityId`, `EventReference.entityId`, and `AttributeReference.entityId` must resolve to a top-level `uniqueIdentifier` in that same submitted array. Fabric item action rules must also resolve `fabricJobConnectionDocumentId` to a `fabricItemAction-v1.uniqueIdentifier` in the same array.
+
+If Fabric returns `FailedToResolveEntity` with `DocumentType timeSeriesView not found`, one of those references points at a `timeSeriesView-v1` GUID that is absent from the payload. Re-read the definition, preserve existing entities, fix the missing reference, and retry only after the preflight passes.
+
 ---
 
 ## Container (`container-v1`)

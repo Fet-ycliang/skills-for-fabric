@@ -17,6 +17,11 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
+# ADC skills package build output
+/out/
+/build/bin/
+/build/obj/
+
 # Logs
 *.log
 

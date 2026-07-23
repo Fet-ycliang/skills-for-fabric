@@ -4,6 +4,21 @@ User-facing changes for the public Microsoft Fabric Skills release.
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-07-23
+
+### Added
+- **`skills/azmon-mirroredcatalogs-operations-cli`** -- onboards Azure Monitor / Application Insights / Log Analytics observability data into Microsoft Fabric as a Mirrored Catalog item and turns that telemetry into business-impact insights by correlating observability signals with business data, ending in ready-to-paste Operations Agent instructions.
+
+### Changed
+- **`skills/semantic-model-authoring`** -- removed instructions that referenced the upcoming Copilot file format.
+- **`databricks-migration`** -- expanded Databricks-to-Fabric guidance for `dbutils` replacements, notebook parameters, environments, Lakehouse table references, MLflow, and workload mappings.
+
+### Fixed
+- **`skills/activator-authoring-cli`** -- treat schema-only, zero-row, non-emitting, or stale signal sources as missing source data so the skill stops and asks for source details instead of force-fitting a rule onto an unrelated existing item.
+- **`skills/activator-consumption-cli`** -- route read-only "show me all Activators" prompts to consumption guidance instead of the authoring skill.
+- **`check-updates`** -- detects marketplace plugins, direct plugins, positively identified Git clones, and loose skills copied or materialized from a file or URL; isolates the seven-day cache by installed entry or clone root; provides host-appropriate Copilot, Claude, Cursor, or safe no-command update guidance; and offers an explicit, confirmation-gated migration from official loose copies to a complete current plugin bundle.
+- **`databricks-migration`** -- corrected mount and notebook parameter guidance, and now requires inventory and constraint clarification before recommending a workspace-wide Fabric topology.
+
 ## [0.3.8] - 2026-07-16
 
 ### Added

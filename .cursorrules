@@ -75,6 +75,9 @@ Developers use REST APIs to manage artifacts, then protocol-specific connections
 ### Spark Operations
 - Operations skill: `skills/spark-operations-cli/SKILL.md` — read-only triage for failed jobs, stuck sessions, performance bottlenecks
 
+### Azure Monitor Observability (Real-Time Intelligence)
+- Operations skill: `skills/azmon-mirroredcatalogs-operations-cli/SKILL.md` — onboard Azure Monitor / App Insights / Log Analytics observability data into Fabric and correlate telemetry with business data for business-impact insights and Operations Agent instructions
+
 ### Dataflows Gen2 (Data Integration)
 - Use Fabric REST API for dataflow lifecycle management and Power Query M mashup authoring
 - Primary CLI tool: `az rest` against the Fabric REST API

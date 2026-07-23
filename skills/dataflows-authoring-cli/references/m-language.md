@@ -165,7 +165,7 @@ Use the record form when downstream code (`try ... otherwise` chains, `Table.Rep
 Credentials are required to connect to the File source. (Source at <path>.)
 ```
 
-There is no File credential type for Fabric Dataflow Gen2 cloud refresh. Use a Lakehouse, Warehouse, OData feed, or `Web.Contents` instead — see [connectors.md § Function inventory](connectors.md#function-inventory). For runtime-disabled `Web.Page` / `Web.BrowserContents`, see [connectors.md § Runtime-disabled functions](connectors.md#runtime-disabled-functions).
+There is no File credential type for Fabric Dataflow Gen2 cloud refresh. Use a Lakehouse, Warehouse, OData feed, or `Web.Contents` instead -- see [connectors.md Function inventory](connectors.md#function-inventory). For the gateway and direct-`executeQuery` boundary of `Web.Page` / `Web.BrowserContents`, see [connectors.md Browser functions and gateway scope](connectors.md#browser-functions-and-gateway-scope).
 
 ## MUST / PREFER / AVOID
 
@@ -184,7 +184,7 @@ There is no File credential type for Fabric Dataflow Gen2 cloud refresh. Use a L
 **AVOID**
 
 1. Treating an Arrow-null cell value as "the column has nulls" without testing — it may be an errored cell. Probe with `try Conv{i}[Col]` to disambiguate.
-2. `File.Contents`, `Web.Page`, `Web.BrowserContents` — see [§ `File.Contents`](#filecontents--exposed-but-unusable) and [connectors.md § Runtime-disabled functions](connectors.md#runtime-disabled-functions).
+2. `File.Contents`, plus `Web.Page` / `Web.BrowserContents` in direct `executeQuery` - see [`File.Contents`](#filecontents--exposed-but-unusable) and [connectors.md Browser functions and gateway scope](connectors.md#browser-functions-and-gateway-scope).
 3. Discriminating on `Error.Reason` without setting it explicitly. Both built-in errors and `error "msg"` use `Reason = "Expression.Error"`. For custom reasons use the record form: `error [Reason = "...", Message = "..."]`.
 
 ## See also
