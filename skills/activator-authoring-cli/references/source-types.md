@@ -19,7 +19,7 @@ Standalone action entities such as `fabricItemAction-v1` are part of the overall
 |----------|----------------|---------|
 | Shared envelope | all entities | Common `uniqueIdentifier` + `payload` + `type` wrapper |
 | Container | `container-v1` | Top-level grouping entity for hand-authored graphs |
-| Sources | `eventstreamSource-v1`, `kqlSource-v1`, `digitalTwinBuilderSource-v1`, `realTimeHubSource-v1` | Connect Activator to upstream data |
+| Sources | `eventstreamSource-v1`, `kqlSource-v1`, `digitalTwinBuilderSource-v1`, `realTimeHubSource-v1`, `powerBiSource-v1` | Connect Activator to upstream data |
 | Views | `timeSeriesView-v1` | Model events, objects, attributes, and rules via `payload.definition.type` |
 | Actions | `fabricItemAction-v1` | Standalone invokable Fabric item actions used by rules |
 
@@ -63,7 +63,7 @@ Top-level grouping entity used by the hand-authored pull-source flows in this sk
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | `name` | string | yes | Display name |
-| `type` | string | yes | Classification (e.g. `samples`, `kqlQueries`, `rthSubscriptions`) |
+| `type` | string | yes | Classification (e.g. `samples`, `kqlQueries`, `rthSubscriptions`, exact `pbiMetrics` for Power BI) |
 
 ---
 
@@ -75,6 +75,7 @@ Top-level grouping entity used by the hand-authored pull-source flows in this sk
 | KQL / Eventhouse | `kqlSource-v1` | [kql-source.md](kql-source.md) | Scheduled queries against a KQL database |
 | Digital Twin Builder / Ontology | `digitalTwinBuilderSource-v1` | [dtb-source.md](dtb-source.md) | Scheduled DTB / ontology queries against an existing Fabric item |
 | Real-time Hub | `realTimeHubSource-v1` | [real-time-hub-source.md](real-time-hub-source.md) | Fabric workspace event monitoring |
+| Power BI | `powerBiSource-v1` | [powerbi-source.md](powerbi-source.md) | Stored query over a report visual / semantic model metric |
 
 ---
 

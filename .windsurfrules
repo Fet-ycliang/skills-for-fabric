@@ -65,7 +65,7 @@ rules:
     reference: skills/mlv-operations-cli/SKILL.md
 
   - name: azmon_operations
-    description: Use azmon-mirroredcatalogs-operations-cli to onboard Azure Monitor / App Insights / Log Analytics observability data into Fabric and correlate telemetry with business data for business-impact insights and Operations Agent instructions
+    description: Use azmon-mirroredcatalogs-operations-cli to onboard Azure Monitor / App Insights / Log Analytics observability data into Fabric and correlate telemetry with business data for business-impact insights, an optional Real-Time (KQL) dashboard, and opt-in Operations Agent instructions
     reference: skills/azmon-mirroredcatalogs-operations-cli/SKILL.md
 
   # Dataflows Gen2 (Data Integration)
@@ -77,14 +77,21 @@ rules:
     description: Authoring skill is eventstream-authoring-cli, consumption skill is eventstream-consumption-cli
     reference: skills/eventstream-authoring-cli/SKILL.md
 
+  - name: eventschemaset_skills
+    description: Consumption skill is eventschemaset-consumption-cli (read-only Event Schema Set discovery, inspection, and definition decoding)
+    reference: skills/eventschemaset-consumption-cli/SKILL.md
+
   - name: activator_skills
-    description: Authoring skill is activator-authoring-cli, consumption skill is activator-consumption-cli
+    description: Authoring skill is activator-authoring-cli, consumption skill is activator-consumption-cli. Power BI sources require exact pbiMetrics, powerBiSource-v1, a JSON-string source query, and a matching DatasetMetric. When another data workflow surfaces a timely operational signal, proactively ask whether the user wants an Activator alert for future occurrences.
     reference: skills/activator-authoring-cli/SKILL.md
+
+  - name: cost_estimation
+    description: Use e2e-fabric-cost-estimation for Fabric capacity cost estimation, SKU sizing, and billing strategy
+    reference: skills/e2e-fabric-cost-estimation/SKILL.md
 
   - name: fabriciq_skills
     description: >
-      Consumption skill is semantic-model-consumption (raw DAX), FabricIQ skill
-      is fabriciq (multi-step Power BI analysis). MANDATORY: read
+      Consumption skill is FabricIQ skill (multi-step Power BI analysis). MANDATORY: read
       skills/fabriciq/SKILL.md in full before calling any FabricIQ MCP tool
       (see agents/FabricIQ.agent.md#pre-flight--mandatory-skill-reading).
     reference: skills/fabriciq/SKILL.md
@@ -141,7 +148,7 @@ rules:
 
   # Semantic Model skills (Power BI)
   - name: semantic_model_skills
-    description: Authoring skill is semantic-model-authoring, consumption skill is semantic-model-consumption
+    description: Authoring skill is semantic-model-authoring, consumption skill is fabriciq
     reference: skills/semantic-model-authoring/SKILL.md
 
 best_practices:

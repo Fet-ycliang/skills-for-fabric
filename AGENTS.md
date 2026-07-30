@@ -39,6 +39,7 @@ Fabric REST APIs: https://learn.microsoft.com/en-us/rest/api/fabric/articles/
 | KQL Database / Eventhouse | https://learn.microsoft.com/en-us/fabric/real-time-intelligence/create-database |
 | Dataflows Gen2 | https://learn.microsoft.com/en-us/fabric/data-factory/dataflows-gen2-overview |
 | Eventstream | https://learn.microsoft.com/en-us/fabric/real-time-intelligence/event-streams/overview |
+| Event Schema Set | https://learn.microsoft.com/en-us/rest/api/fabric/eventschemaset/items/ |
 | Activator | https://learn.microsoft.com/en-us/fabric/real-time-intelligence/data-activator/activator-introduction |
 | Catalog Search | https://learn.microsoft.com/en-us/rest/api/fabric/core/catalog/search |
 | Semantic Models | https://learn.microsoft.com/en-us/power-bi/connect-data/service-datasets-understand |
@@ -62,7 +63,7 @@ Fabric REST APIs: https://learn.microsoft.com/en-us/rest/api/fabric/articles/
 - KQL for real-time analytics (always use time filters)
 - Power Query M for Dataflows Gen2 transformations (see `dataflows-authoring-cli` and `dataflows-consumption-cli` skills)
 - Eventstream for real-time event ingestion (graph-based topology with sources, operators, destinations)
-- Activator for Reflex alerts, notifications, and automated actions over Fabric events and data
+- Activator for Reflex alerts, notifications, and automated actions over Fabric events and data, including Power BI-backed metrics
 - DAX for Semantic Model measures
 - Semantic model development (see `semantic-model-authoring`)
 - Power BI report planning skill: `skills/powerbi-report-planning/SKILL.md` — requirements, page plan, approval gate
@@ -76,20 +77,28 @@ Fabric REST APIs: https://learn.microsoft.com/en-us/rest/api/fabric/articles/
 - Pipelines for orchestration
 - Parameterize everything for reusability
 - Warehouse operations skill: `skills/sqldw-operations-cli/SKILL.md` — performance diagnostics, slow queries, query insights
-- Azure Monitor observability operations skill: `skills/azmon-mirroredcatalogs-operations-cli/SKILL.md` — onboard Azure Monitor / App Insights / Log Analytics observability data into Fabric and correlate telemetry with business data for business-impact insights and Operations Agent instructions
+- Azure Monitor observability operations skill: `skills/azmon-mirroredcatalogs-operations-cli/SKILL.md` — onboard Azure Monitor / App Insights / Log Analytics observability data into Fabric and correlate telemetry with business data for business-impact insights, an optional Real-Time (KQL) dashboard, and opt-in Operations Agent instructions
 
 ### Activator / Reflex
 - Authoring skill: `skills/activator-authoring-cli/SKILL.md` — create Activator items, sources, rules, conditions, and actions
 - Consumption skill: `skills/activator-consumption-cli/SKILL.md` — inspect Activator definitions, rules, sources, and actions
+- Power BI sources use `powerBiSource-v1` under an exact `pbiMetrics` container, with a JSON-string query payload and matching `DatasetMetric`; require explicit `updateDefinition` success
+- When another data workflow surfaces a timely operational signal, proactively ask whether the user wants an Activator alert for future occurrences
+
+### Cost Estimation & Migration Planning
+- E2E skill: `skills/e2e-fabric-cost-estimation/SKILL.md` — estimate Fabric capacity costs, SKU sizing, billing strategy, workload CU equivalence mapping
 
 ### Power BI / FabricIQ
-- Consumption skill: `skills/semantic-model-consumption/SKILL.md` — raw DAX queries against semantic models via MCP ExecuteQuery tool
+- Consumption skill: `skills/fabriciq/SKILL.md` — raw DAX queries against semantic models via MCP ExecuteQuery tool
 - FabricIQ skill: `skills/fabriciq/SKILL.md` — multi-step Power BI data analysis (discover, inspect, resolve, generate, execute)
 - ⚠️ **MANDATORY**: Before calling any FabricIQ MCP tool, read `skills/fabriciq/SKILL.md` in full (see [`agents/FabricIQ.agent.md` § Pre-Flight](../agents/FabricIQ.agent.md#pre-flight--mandatory-skill-reading)).
 
 ### Fabric IQ / Ontology (preview)
 - Authoring skill: `skills/fabriciq-ontology-authoring-cli/SKILL.md` — define entity types, properties (incl. timeseries), relationship types, and bind them to lakehouse/Eventhouse tables via the item-definition REST API
 - Consumption skill: `skills/fabriciq-ontology-consumption-cli/SKILL.md` — read ontology items for agent grounding context and route ontology-backed queries to the matching per-datasource consumption skill
+
+### Event Schema Set (Real-Time Intelligence)
+- Consumption skill: `skills/eventschemaset-consumption-cli/SKILL.md` — read-only discovery, inspection, and definition decoding of Event Schema Sets (catalogs of `eventTypes` and message `schemas`) via `az rest` against the Fabric Items REST API (`.../eventSchemaSets`)
 
 ## Constraints
 

@@ -27,6 +27,7 @@ body:
         - SQL database
         - Dataflows Gen2
         - Eventhouse / KQL
+        - Event Schema Set / Real-Time Intelligence
         - Eventstream / Real-Time Intelligence
         - Activator / Reflex
         - OneLake Catalog (search / discovery)
@@ -35,6 +36,7 @@ body:
         - Power BI Reports
         - Fabric IQ / Ontology
         - Azure Monitor into Fabric
+        - Fabric cost estimation
         - Infrastructure / repo / CI / general (or not sure)
     validations:
       required: true

@@ -291,7 +291,7 @@ Once data has landed in Fabric Lakehouses, use this sequence to validate and exp
 | Medallion architecture build-out | `e2e-medallion-architecture` | Structuring Bronze/Silver/Gold after lift-and-shift |
 | Warehouse performance monitoring | `sqldw-operations-cli` | Diagnosing slow queries on Fabric Warehouse |
 | Semantic model creation | `semantic-model-authoring` | Building Power BI models over migrated data |
-| Report consumption & DAX | `semantic-model-consumption` | Querying existing semantic models |
+| Report consumption & DAX | `fabriciq` | Querying existing semantic models |
 | KQL analytics | `eventhouse-authoring-cli` / `eventhouse-consumption-cli` | If migrating real-time workloads to Eventhouse |
 
 ### Variable Library for Environment Promotion

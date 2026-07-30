@@ -2,18 +2,29 @@
 
 Detailed T-SQL queries for all monitoring and diagnostic analyses. All queries target the built-in `queryinsights` schema and system DMVs available in Fabric Data Warehouse.
 
+> **Execution method:** All queries in this file are executed via the `fabric-sqlendpoint-execute_query` MCP tool:
+> ```text
+> fabric-sqlendpoint-execute_query(workspaceId, itemId, "<query from this file>")
+> ```
+> No `GO` separators or sqlcmd flags are needed — just pass the T-SQL text directly.
+
 > **Data source:** `queryinsights` views retain 30 days of history. Data appears with up to 15 minutes delay after query completion.
 
 ---
 
 ## Performance Analysis Queries
 
+> **MCP parameter substitution:** The queries below are **ready-to-use literals** with defaults already applied (e.g. `SELECT TOP 5`, `DATEADD(HOUR, -1, ...)`); the parameter table beneath each query shows which value to change. The MCP `fabric-sqlendpoint-execute_query` tool does not support sqlcmd-style external parameter substitution (no `-v`, `:setvar`, or separate parameter binding), so to parameterize a query either **edit the literal value in place** before calling **or declare the variables inside the batch** with ordinary T-SQL: `DECLARE @limit int = 5; DECLARE @hours int = 24;` at the start of the query. In-batch T-SQL variables are fully supported; only external/sqlcmd-style parameterization is not.
+>
+> In the parameter tables below, `N` is a **positive** integer and the leading minus is already part of the template — e.g. with the template `DATEADD(HOUR, -N, ...)` and `N = 24` you get `DATEADD(HOUR, -24, ...)`.
+
 ### Long-Running Queries Summary
 
 **Purpose:** Find the slowest queries from `queryinsights.long_running_queries`.
 
 ```sql
-SELECT TOP @limit
+-- Ready-to-use (defaults applied):
+SELECT TOP 5
     last_run_command,
     last_run_total_elapsed_time_ms,
     median_total_elapsed_time_ms,
@@ -24,7 +35,7 @@ ORDER BY last_run_total_elapsed_time_ms DESC;
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `@limit` | 5 | Max queries to return |
+| `TOP N` | 5 | Max queries to return (replace the number) |
 
 **Return fields:**
 
@@ -40,12 +51,43 @@ ORDER BY last_run_total_elapsed_time_ms DESC;
 
 ---
 
+### Most Frequently Run Queries
+
+**Purpose:** Rank the most-repeated queries from `queryinsights.frequently_run_queries` to spot hot paths worth caching or tuning.
+
+```sql
+-- Ready-to-use (defaults applied):
+SELECT TOP 10
+    query_hash,
+    number_of_runs,
+    avg_total_elapsed_time_ms,
+    last_run_command
+FROM queryinsights.frequently_run_queries
+ORDER BY number_of_runs DESC;
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `TOP N` | 10 | Max queries to return (replace the number) |
+
+**Return fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `query_hash` | varchar(200) | Hash identifying the normalized query shape |
+| `number_of_runs` | integer | How many times the query ran |
+| `avg_total_elapsed_time_ms` | integer | Average execution time across runs (ms) |
+| `last_run_command` | string | SQL query text of the most recent run |
+
+---
+
 ### Top Resource Consumers
 
 **Purpose:** Identify CPU- and storage-heavy queries with performance recommendations.
 
 ```sql
-SELECT TOP @limit
+-- Ready-to-use (defaults: top 5, last 1 hour):
+SELECT TOP 5
     command,
     total_elapsed_time_ms,
     allocated_cpu_time_ms,
@@ -53,14 +95,14 @@ SELECT TOP @limit
     data_scanned_memory_mb,
     data_scanned_disk_mb
 FROM queryinsights.exec_requests_history
-WHERE start_time > DATEADD(HOUR, -@hours, GETUTCDATE())
+WHERE start_time > DATEADD(HOUR, -1, GETUTCDATE())
 ORDER BY allocated_cpu_time_ms DESC;
 ```
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `@limit` | 5 | Max results |
-| `@hours` | 1 | Time window in hours |
+| `TOP N` | 5 | Max results (replace the number) |
+| `DATEADD(HOUR, -N, ...)` | 1 | Time window in hours (replace N) |
 
 **Return fields:**
 
@@ -88,6 +130,7 @@ ORDER BY allocated_cpu_time_ms DESC;
 **Purpose:** Analyze user activity and query patterns using a ranked CTE.
 
 ```sql
+-- Ready-to-use (defaults: top 5, last 24 hours, min 1 query):
 WITH UserStats AS (
     SELECT
         COALESCE(login_name, 'Unknown User') AS user_name,
@@ -103,16 +146,16 @@ WITH UserStats AS (
         MIN(start_time) AS first_query_time,
         MAX(start_time) AS last_query_time
     FROM queryinsights.exec_requests_history
-    WHERE start_time > DATEADD(HOUR, -@hours, GETUTCDATE())
+    WHERE start_time > DATEADD(HOUR, -24, GETUTCDATE())
     GROUP BY login_name
-    HAVING COUNT(*) >= @min_queries
+    HAVING COUNT(*) >= 1
 ),
 RankedUsers AS (
     SELECT *,
         ROW_NUMBER() OVER (ORDER BY total_queries DESC, total_cpu_time_ms DESC) AS user_rank
     FROM UserStats
 )
-SELECT TOP @limit
+SELECT TOP 5
     user_name, total_queries, avg_elapsed_time_ms, max_elapsed_time_ms,
     avg_cpu_time_ms, total_cpu_time_ms, avg_data_scanned_mb,
     total_data_scanned_mb, failed_queries, active_days,
@@ -123,9 +166,9 @@ ORDER BY user_rank;
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `@limit` | 5 | Max users to analyze |
-| `@hours` | 24 | Time window |
-| `@min_queries` | 1 | Minimum query count for inclusion |
+| `TOP N` | 5 | Max users to analyze (replace the number) |
+| `DATEADD(HOUR, -N, ...)` | 24 | Time window in hours (replace N) |
+| `HAVING COUNT(*) >= N` | 1 | Minimum query count for inclusion (replace N) |
 
 **Return fields:**
 
@@ -157,13 +200,14 @@ ORDER BY user_rank;
 **Purpose:** Detect performance regressions by comparing recent window against historical baseline.
 
 ```sql
+-- Ready-to-use (defaults: recent = 1 hour, baseline = 7 days back):
 WITH recent AS (
     SELECT
         AVG(total_elapsed_time_ms) AS avg_recent_elapsed_ms,
         AVG(allocated_cpu_time_ms) AS avg_recent_cpu_ms,
         AVG(data_scanned_remote_storage_mb + data_scanned_memory_mb + data_scanned_disk_mb) AS avg_recent_data_scanned_mb
     FROM queryinsights.exec_requests_history
-    WHERE start_time > DATEADD(HOUR, -@hours, GETUTCDATE())
+    WHERE start_time > DATEADD(HOUR, -1, GETUTCDATE())
       AND status = 'Succeeded'
 ),
 baseline AS (
@@ -172,8 +216,8 @@ baseline AS (
         AVG(allocated_cpu_time_ms) AS avg_baseline_cpu_ms,
         AVG(data_scanned_remote_storage_mb + data_scanned_memory_mb + data_scanned_disk_mb) AS avg_baseline_data_scanned_mb
     FROM queryinsights.exec_requests_history
-    WHERE start_time > DATEADD(DAY, -@days_back, GETUTCDATE())
-      AND start_time <= DATEADD(HOUR, -@hours, GETUTCDATE())
+    WHERE start_time > DATEADD(DAY, -7, GETUTCDATE())
+      AND start_time <= DATEADD(HOUR, -1, GETUTCDATE())
       AND status = 'Succeeded'
 )
 SELECT
@@ -189,8 +233,8 @@ CROSS JOIN baseline b;
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `@hours` | 1 | Size of the recent analysis window |
-| `@days_back` | 7 | Days back for baseline comparison |
+| `DATEADD(HOUR, -N, ...)` in recent CTE | 1 | Size of the recent analysis window (hours) |
+| `DATEADD(DAY, -N, ...)` in baseline CTE | 7 | Days back for baseline comparison |
 
 **Return fields:**
 
@@ -212,7 +256,8 @@ CROSS JOIN baseline b;
 **Purpose:** Retrieve the most recently executed queries.
 
 ```sql
-SELECT TOP @limit
+-- Ready-to-use (default: 10 most recent):
+SELECT TOP 10
     distributed_statement_id,
     login_name,
     command,
@@ -225,7 +270,7 @@ ORDER BY start_time DESC;
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `@limit` | 10 | Max queries to return |
+| `TOP N` | 10 | Max queries to return (replace the number) |
 
 ---
 
@@ -234,7 +279,8 @@ ORDER BY start_time DESC;
 **Purpose:** Search historical query patterns by table name, column, or keyword.
 
 ```sql
-SELECT TOP @limit
+-- Ready-to-use (replace 'FactSales' with your search term):
+SELECT TOP 10
     query_hash,
     COUNT(*) AS execution_count,
     AVG(total_elapsed_time_ms) AS avg_elapsed_ms,
@@ -242,18 +288,18 @@ SELECT TOP @limit
     MAX(total_elapsed_time_ms) AS max_elapsed_ms,
     MAX(command) AS sample_command
 FROM queryinsights.exec_requests_history
-WHERE command LIKE '%' + @search_term + '%'
+WHERE command LIKE '%FactSales%'
   AND command NOT LIKE '%queryinsights%'
 GROUP BY query_hash
-HAVING COUNT(*) >= @min_execution_count
+HAVING COUNT(*) >= 1
 ORDER BY execution_count DESC;
 ```
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `@search_term` | _(required)_ | Text to search for |
-| `@min_execution_count` | 1 | Minimum pattern execution count |
-| `@limit` | 10 | Max patterns to return |
+| `LIKE '%...%'` | _(required)_ | Replace `FactSales` with your search term |
+| `HAVING COUNT(*) >= N` | 1 | Minimum pattern execution count |
+| `TOP N` | 10 | Max patterns to return |
 
 ---
 
@@ -264,7 +310,8 @@ ORDER BY execution_count DESC;
 **Purpose:** Identify queries exceeding a duration threshold for deeper investigation.
 
 ```sql
-SELECT TOP @limit
+-- Ready-to-use (defaults: top 3, min 30 seconds):
+SELECT TOP 3
     distributed_statement_id,
     command,
     total_elapsed_time_ms,
@@ -273,15 +320,15 @@ SELECT TOP @limit
     data_scanned_memory_mb,
     result_cache_hit
 FROM queryinsights.exec_requests_history
-WHERE total_elapsed_time_ms >= @min_duration_ms
+WHERE total_elapsed_time_ms >= 30000
   AND status = 'Succeeded'
 ORDER BY total_elapsed_time_ms DESC;
 ```
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `@limit` | 3 | Max queries to analyze |
-| `@min_duration_ms` | 30000 | Minimum duration threshold (ms) |
+| `TOP N` | 3 | Max queries to analyze (replace the number) |
+| `>= N` (WHERE clause) | 30000 | Minimum duration threshold in ms |
 
 **Analysis checklist:**
 - High `data_scanned_remote_storage_mb` → data layout issues
@@ -298,6 +345,7 @@ ORDER BY total_elapsed_time_ms DESC;
 **Step 1** — Find pressure windows by consolidating consecutive pressure events:
 
 ```sql
+-- Ready-to-use (default: last 24 hours):
 WITH PressureEvents AS (
     SELECT
         timestamp,
@@ -307,7 +355,7 @@ WITH PressureEvents AS (
         current_workspace_capacity,
         LAG(timestamp) OVER (PARTITION BY sql_pool_name ORDER BY timestamp) AS prev_timestamp
     FROM queryinsights.sql_pool_insights
-    WHERE timestamp > DATEADD(HOUR, -@hours, GETUTCDATE())
+    WHERE timestamp > DATEADD(HOUR, -24, GETUTCDATE())
       AND is_pool_under_pressure = 1
 ),
 WindowBoundaries AS (
@@ -346,8 +394,8 @@ ORDER BY MIN(timestamp) DESC;
 **Step 2** — For each pressure window, find overlapping queries (substitute actual `window_start`/`window_end` timestamps from Step 1):
 
 ```sql
--- Replace '<window_start>' and '<window_end>' with actual timestamps from Step 1
-SELECT TOP @top_n
+-- Replace timestamps with actual values from Step 1:
+SELECT TOP 5
     command,
     login_name,
     start_time,
@@ -370,8 +418,9 @@ ORDER BY allocated_cpu_time_ms DESC;
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `@hours` | 24 | Hours back to analyze |
-| `@top_n` | 5 | Max queries per pressure window |
+| `DATEADD(HOUR, -N, ...)` in Step 1 | 24 | Hours back to analyze (replace N) |
+| `TOP N` in Step 2 | 5 | Max queries per pressure window |
+| `'<window_start>'`/`'<window_end>'` | _(from Step 1)_ | Substitute actual timestamps from Step 1 results |
 
 **Response formatting** — for each overlapping query, classify problems:
 - CPU > 5M ms → "Extremely high CPU", >1M → "Very high CPU", >100K → "High CPU"
@@ -393,6 +442,7 @@ ORDER BY allocated_cpu_time_ms DESC;
 **Purpose:** Compare cold (remote storage) vs warm (memory/disk) reads for repeated queries using a CTE with hash-level grouping.
 
 ```sql
+-- Ready-to-use (defaults: last 24 hours, min 2 runs per hash):
 WITH hash_stats AS (
     SELECT
         query_hash,
@@ -400,9 +450,9 @@ WITH hash_stats AS (
     FROM queryinsights.exec_requests_history
     WHERE query_hash IS NOT NULL
       AND status = 'Succeeded'
-      AND start_time > DATEADD(HOUR, -@hours, GETUTCDATE())
+      AND start_time > DATEADD(HOUR, -24, GETUTCDATE())
     GROUP BY query_hash
-    HAVING COUNT(*) >= @min_runs
+    HAVING COUNT(*) >= 2
 )
 SELECT TOP 500
     e.query_hash,
@@ -420,14 +470,14 @@ SELECT TOP 500
 FROM queryinsights.exec_requests_history e
 INNER JOIN hash_stats h ON e.query_hash = h.query_hash
 WHERE e.status = 'Succeeded'
-  AND e.start_time > DATEADD(HOUR, -@hours, GETUTCDATE())
+  AND e.start_time > DATEADD(HOUR, -24, GETUTCDATE())
 ORDER BY h.run_count DESC, e.query_hash, e.start_time;
 ```
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `@hours` | 24 | Time window to analyze |
-| `@min_runs` | 2 | Minimum executions per query_hash to include |
+| `DATEADD(HOUR, -N, ...)` | 24 | Time window in hours (replace N) |
+| `HAVING COUNT(*) >= N` | 2 | Minimum executions per query_hash |
 
 **Classification logic** — for each execution, compute `total_mb = remote + memory + disk`:
 - `result_cache_hit = 1` → **cached**

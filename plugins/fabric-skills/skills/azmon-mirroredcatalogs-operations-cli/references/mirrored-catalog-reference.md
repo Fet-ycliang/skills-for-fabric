@@ -27,6 +27,18 @@ workspace. Creating the item requires a valid connection for the source Log
 Analytics workspace and sufficient Fabric workspace permission. Capture the
 returned item id for later monitoring/refresh calls.
 
+> **Service Principal item creation (prefer reuse; observed fallback).** Per
+> Microsoft Learn, the **Create Mirrored Catalog** API lists **service principals
+> and managed identities** as supported identities for create, so SP create is
+> **documented as supported**. Some Service Principal runs have nonetheless
+> **observed** the item **create** rejected under an application-only token (the
+> underlying item-creation path can run **on-behalf-of** a signed-in user). Keep
+> the docs-accurate default: **prefer reusing** an existing item + connection;
+> otherwise **attempt create under the SP**, and only fall back to a **user
+> (delegated) sign-in / Fabric UI** create if that create is **denied or
+> unavailable**. Get, list, **update**, discovery, monitoring, and refresh remain
+> available to the SP once the item exists.
+
 - [Items - REST API (MirroredCatalog)](https://learn.microsoft.com/en-us/rest/api/fabric/mirroredcatalog/items)
 
 ### Item definition
@@ -42,6 +54,19 @@ editing; do not fabricate definition fields.
 Browse available source **scopes** (namespaces) and **tables** after the
 connection/item is available. Use only returned scope/table values — never
 fabricate table names. Discovery is read-only.
+
+> **Scope-based table selection (not per-table).** The item mirrors by `scope` —
+> a namespace hierarchy path that MUST be a `Selectable` value from the List
+> Scopes API — not by a free-form list of table names. To mirror only specific
+> tables, pick the **narrowest `Selectable` scope** that covers them. When there
+> is no intent yet (explore-first), create with a **broader scope** and re-scope
+> narrower later once intent is known. If the narrowest available scope is broader
+> than the requested set, every sibling
+> table under it is mirrored too (siblings cannot be individually excluded) —
+> surface this and confirm before creating. After create/reuse, verify the
+> mirrored table set equals the requested set (**equality, not subset**): extras
+> mean the scope is too broad; missing tables mean the mirror has not
+> materialized yet (verify status, refresh/sync, wait, re-check).
 
 - [Discovery - REST API (MirroredCatalog)](https://learn.microsoft.com/en-us/rest/api/fabric/mirroredcatalog/discovery)
 
@@ -62,7 +87,7 @@ Only after these checks may alternative metadata paths be evaluated.
 
 Report readiness/status of the mirrored item and of individual tables rather than
 guessing readiness. A brand-new item will not surface tables until its mirror has
-materialized them.
+materialized them (typically ~5 minutes for a first-time mirror).
 
 - [Monitoring - REST API (MirroredCatalog)](https://learn.microsoft.com/en-us/rest/api/fabric/mirroredcatalog/monitoring)
 

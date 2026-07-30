@@ -44,7 +44,8 @@ Route to specialized skills for endpoint-specific implementation:
 - sqldw-operations-cli for DW performance diagnostics, slow query analysis, and query insights
 - eventhouse-consumption-cli for read-only KQL queries against Eventhouse / KQL Databases
 - eventstream-consumption-cli for listing, inspecting, and monitoring Eventstream configurations and status
-- semantic-model-consumption for read-only DAX queries and semantic model metadata discovery
+- semantic-model-authoring for semantic model metadata discovery
+- fabriciq for read-only DAX queries
 - dataflows-consumption-cli for dataflow monitoring, refresh status tracking, governance audits, and definition exploration
 - dataflows-save-as-authoring-cli for tenant-wide oversight of save-as Dataflow Gen2 operations (Gen1 → Gen2 CI/CD), readiness scans across workspaces, and risk assessment reporting
 

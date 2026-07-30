@@ -1,207 +1,246 @@
 # Authoring CLI Quick Reference
 
-Concise `sqlcmd` invocation patterns, output formatting, monitoring queries, and agent tips. For full T-SQL patterns, see [SQLDW-AUTHORING-CORE.md](../../../common/SQLDW-AUTHORING-CORE.md). For full reusable scripts, see [authoring-script-templates.md](authoring-script-templates.md).
+Concise `fabric-sqlendpoint-execute_query` MCP tool patterns for DDL, DML, data ingestion, monitoring, and agent tips. For full T-SQL patterns, see [SQLDW-AUTHORING-CORE.md](../../../common/SQLDW-AUTHORING-CORE.md). For workflow templates, see [authoring-script-templates.md](authoring-script-templates.md).
 
-All examples assume reusable connection variables are set:
+## Query Execution
 
-```bash
-FABRIC_SERVER="<endpoint>.datawarehouse.fabric.microsoft.com"
-FABRIC_DB="<WarehouseName>"
-SQLCMD="sqlcmd -S $FABRIC_SERVER -d $FABRIC_DB -G"
+All T-SQL operations use the `fabric-sqlendpoint-execute_query` MCP tool:
+
+```text
+fabric-sqlendpoint-execute_query(workspaceId, itemId, query)
 ```
 
-## Core Authoring via CLI
+- **workspaceId**: Workspace GUID (discover via `az rest`)
+- **itemId**: Warehouse item GUID, or a Lakehouse's **SQL analytics endpoint** id (`properties.sqlEndpointProperties.id`, **not** the lakehouse item id) — discover via `az rest`
+- **query**: Single T-SQL batch (no `GO` separators, no sqlcmd meta-commands)
+- **Returns**: CSV results (RFC 4180) + metadata text
 
-### Table DDL via CLI
+### Key Constraints
 
-```bash
+- **No `GO` separators** — each call is one batch. For multi-batch workflows, call `fabric-sqlendpoint-execute_query` multiple times.
+- **10,000 row max** — use `TOP N` or `WHERE` to limit results.
+- **300s timeout** — break very long operations into steps.
+- **20 req/min** — consolidate related statements into one batch where possible.
+- **Only last result set** — if a batch has multiple SELECTs, only the final one is returned.
+- _Limit values (10,000 rows / 300s / 20 req/min) are observed defaults, not a documented contract — verify against live 429/timeout/truncation responses._
+
+## Core Authoring via MCP
+
+### Table DDL
+
+```text
 # CREATE TABLE
-$SQLCMD -Q "
-CREATE TABLE dbo.FactSales (
-    SaleID bigint NOT NULL,
-    ProductID int NOT NULL,
-    SaleDate date NOT NULL,
-    Amount decimal(19,4) NOT NULL
-)"
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "CREATE TABLE dbo.FactSales (
+      SaleID bigint NOT NULL,
+      ProductID int NOT NULL,
+      SaleDate date NOT NULL,
+      Amount decimal(19,4) NOT NULL
+  )")
+
+# Verify
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "SELECT table_schema, table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_name = 'FactSales'")
 
 # CTAS with explicit types (preferred for populated tables)
-$SQLCMD -Q "
-CREATE TABLE dbo.FactSales_2024 AS
-SELECT SaleID, CAST(Amount AS decimal(19,2)) AS Amount
-FROM dbo.FactSales WHERE SaleDate >= '2024-01-01'"
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "CREATE TABLE dbo.FactSales_2024 AS
+   SELECT SaleID, CAST(Amount AS decimal(19,2)) AS Amount
+   FROM dbo.FactSales WHERE SaleDate >= '2024-01-01'")
 
-# ALTER TABLE — add column / DROP TABLE
-$SQLCMD -Q "ALTER TABLE dbo.FactSales ADD Region varchar(50) NULL"
-$SQLCMD -Q "DROP TABLE IF EXISTS dbo.StagingTable"
+# ALTER TABLE — add column
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "ALTER TABLE dbo.FactSales ADD Region varchar(50) NULL")
+
+# DROP TABLE
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "DROP TABLE IF EXISTS dbo.StagingTable")
 ```
 
-### DML via CLI
+### DML
 
-```bash
+```text
 # INSERT...SELECT (preferred for bulk)
-$SQLCMD -Q "
-INSERT INTO dbo.FactSales (SaleID, ProductID, SaleDate, Amount)
-SELECT SaleID, ProductID, SaleDate, Amount
-FROM dbo.StagingTable WHERE IsValid = 1"
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "INSERT INTO dbo.FactSales (SaleID, ProductID, SaleDate, Amount)
+   SELECT SaleID, ProductID, SaleDate, Amount
+   FROM dbo.StagingTable WHERE IsValid = 1")
 
-# Upsert (production-safe: DELETE + INSERT) — use -i for multi-statement
-$SQLCMD -i upsert.sql
+# Upsert (production-safe: DELETE + INSERT in a TRY/CATCH transaction)
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "BEGIN TRY
+     BEGIN TRANSACTION;
+     DELETE FROM dbo.FactSales WHERE SaleDate = '2025-06-15';
+     INSERT INTO dbo.FactSales (SaleID, ProductID, SaleDate, Amount)
+     SELECT SaleID, ProductID, SaleDate, Amount FROM dbo.StagingTable WHERE SaleDate = '2025-06-15';
+     COMMIT TRANSACTION;
+   END TRY
+   BEGIN CATCH
+     IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+     THROW;
+   END CATCH")
 
 # TRUNCATE (fast, preserves history — use instead of DELETE FROM)
-$SQLCMD -Q "TRUNCATE TABLE dbo.StagingTable"
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "TRUNCATE TABLE dbo.StagingTable")
 ```
 
-### Data Ingestion via CLI
+### Data Ingestion
 
-```bash
+```text
 # Parquet from ADLS Gen2 (uses caller's Entra ID credentials)
-$SQLCMD -Q "
-COPY INTO dbo.FactSales
-FROM 'https://storageacct.dfs.core.windows.net/container/sales/*.parquet'
-WITH (FILE_TYPE = 'PARQUET')"
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "COPY INTO dbo.FactSales
+   FROM 'https://storageacct.dfs.core.windows.net/container/sales/*.parquet'
+   WITH (FILE_TYPE = 'PARQUET')")
 
 # CSV with options
-$SQLCMD -Q "
-COPY INTO dbo.FactSales
-FROM 'https://storageacct.dfs.core.windows.net/container/sales/*.csv'
-WITH (FILE_TYPE = 'CSV', FIRSTROW = 2, FIELDTERMINATOR = ',', ROWTERMINATOR = '\n')"
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "COPY INTO dbo.FactSales
+   FROM 'https://storageacct.dfs.core.windows.net/container/sales/*.csv'
+   WITH (FILE_TYPE = 'CSV', FIRSTROW = 2, FIELDTERMINATOR = ',', ROWTERMINATOR = '\n')")
 
 # OPENROWSET + CTAS (transform-on-ingest)
-$SQLCMD -Q "
-CREATE TABLE dbo.CleanData AS
-SELECT id, UPPER(country) AS Country, CAST(amount AS decimal(19,4)) AS Amount
-FROM OPENROWSET(BULK 'https://storageacct.dfs.core.windows.net/container/raw/*.parquet') AS raw
-WHERE amount > 0"
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "CREATE TABLE dbo.CleanData AS
+   SELECT id, UPPER(country) AS Country, CAST(amount AS decimal(19,4)) AS Amount
+   FROM OPENROWSET(BULK 'https://storageacct.dfs.core.windows.net/container/raw/*.parquet') AS raw
+   WHERE amount > 0")
 ```
 
-## Advanced Authoring Patterns via CLI
+## Advanced Authoring Patterns via MCP
 
-### Transactions via CLI
+### Transactions
 
-Multi-statement transactions require input files or piped here-docs (GO separators needed between batch-scoped statements).
+Transactions work within a single `fabric-sqlendpoint-execute_query` batch (no `GO` needed):
 
-```bash
-# Simple transaction via piped input
-cat <<'SQL' | sqlcmd -S "$FABRIC_SERVER" -d "$FABRIC_DB" -G
-BEGIN TRANSACTION;
-INSERT INTO dbo.FactSales SELECT * FROM dbo.StagingTable WHERE IsValid = 1;
-DELETE FROM dbo.StagingTable WHERE IsValid = 1;
-COMMIT TRANSACTION;
-SQL
+```text
+# Simple transaction — all in one batch
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "BEGIN TRANSACTION;
+   INSERT INTO dbo.FactSales SELECT * FROM dbo.StagingTable WHERE IsValid = 1;
+   DELETE FROM dbo.StagingTable WHERE IsValid = 1;
+   COMMIT TRANSACTION;")
 
-# Transaction with TRY/CATCH via input file
-sqlcmd -S "$FABRIC_SERVER" -d "$FABRIC_DB" -G -i etl_load.sql
+# Transaction with TRY/CATCH
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "BEGIN TRY
+       BEGIN TRANSACTION;
+       INSERT INTO dbo.FactSales SELECT * FROM dbo.StagingTable WHERE IsValid = 1;
+       DELETE FROM dbo.StagingTable WHERE IsValid = 1;
+       COMMIT TRANSACTION;
+   END TRY
+   BEGIN CATCH
+       IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+       THROW;
+   END CATCH;")
 ```
 
-### Schema Evolution via CLI
+### Schema Evolution
 
-```bash
+```text
 # Add nullable column (fast metadata op)
-$SQLCMD -Q "ALTER TABLE dbo.FactSales ADD Region varchar(50) NULL"
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "ALTER TABLE dbo.FactSales ADD Region varchar(50) NULL")
 
 # Drop column (April 2025+)
-$SQLCMD -Q "ALTER TABLE dbo.FactSales DROP COLUMN Region"
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "ALTER TABLE dbo.FactSales DROP COLUMN Region")
 
-# Change column type (CTAS workaround — ALTER COLUMN not supported)
-$SQLCMD -i schema_migrate.sql
+# Change column type (CTAS + rename — robust; ALTER COLUMN is preview)
+# Step 1: Create new table with correct type
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "CREATE TABLE dbo.FactSales_New AS SELECT SaleID, ProductID, SaleDate, CAST(Amount AS decimal(19,2)) AS Amount FROM dbo.FactSales")
+
+# Step 2: Rename tables
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "EXEC sp_rename 'dbo.FactSales', 'FactSales_Old'")
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "EXEC sp_rename 'dbo.FactSales_New', 'FactSales'")
 ```
 
 > **Warning**: CTAS + rename loses time-travel history and security. Re-apply GRANT/DENY after swap.
 
-### Stored Procedures via CLI
+### Stored Procedures
 
-```bash
-# Create procedure (use -i for multi-statement with GO)
-sqlcmd -S "$FABRIC_SERVER" -d "$FABRIC_DB" -G -i create_sp.sql
+```text
+# Create procedure (single batch, no GO needed)
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "CREATE OR ALTER PROCEDURE dbo.sp_LoadFactSales @BatchDate date
+   AS
+   BEGIN
+       SET NOCOUNT ON;
+       DELETE FROM dbo.FactSales WHERE SaleDate = @BatchDate;
+       INSERT INTO dbo.FactSales (SaleID, ProductID, SaleDate, Amount)
+       SELECT SaleID, ProductID, SaleDate, Amount
+       FROM dbo.StagingTable WHERE SaleDate = @BatchDate;
+   END")
 
 # Execute procedure
-$SQLCMD -Q "EXEC dbo.sp_LoadFactSales @BatchDate = '2025-06-15'"
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "EXEC dbo.sp_LoadFactSales @BatchDate = '2025-06-15'")
 
-# Create view on Lakehouse SQLEP (read-only endpoint — views/funcs/procs allowed)
-sqlcmd -S "$LAKEHOUSE_SERVER" -d "$LAKEHOUSE_DB" -G -i create_views.sql
+# Create view on Lakehouse SQLEP (read-only — views/funcs/procs allowed)
+# lakehouseSqlEndpointId = lakehouse's properties.sqlEndpointProperties.id (NOT the lakehouse item id)
+fabric-sqlendpoint-execute_query(workspaceId, lakehouseSqlEndpointId,
+  "CREATE OR ALTER VIEW dbo.vw_ActiveCustomers AS
+   SELECT CustomerID, Name, Email FROM dbo.Customers WHERE IsActive = 1")
 ```
 
-### Time Travel and Recovery via CLI
+### Time Travel and Recovery
 
-```bash
+```text
 # Query data as it existed at a specific time (UTC)
-$SQLCMD -Q "
-SELECT * FROM dbo.FactSales
-OPTION (FOR TIMESTAMP AS OF '2025-06-14T23:59:59.999')" -W
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "SELECT TOP 100 * FROM dbo.FactSales
+   OPTION (FOR TIMESTAMP AS OF '2025-06-14T23:59:59.999')")
 
-# Recover deleted data via CTAS + merge back
-$SQLCMD -Q "
-CREATE TABLE dbo.FactSales_Recovered AS
-SELECT * FROM dbo.FactSales
-OPTION (FOR TIMESTAMP AS OF '2025-06-14T23:59:59.999')"
+# Recover deleted data via CTAS
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "CREATE TABLE dbo.FactSales_Recovered AS
+   SELECT * FROM dbo.FactSales
+   OPTION (FOR TIMESTAMP AS OF '2025-06-14T23:59:59.999')")
 ```
-
-## Script Generation
-
-### sqlcmd Output Formatting Flags
-
-| Flag | Purpose | When |
-|---|---|---|
-| `-W` | Trim trailing spaces | Always |
-| `-s","` | Column separator | CSV export |
-| `-s"\t"` | Tab separator | TSV export |
-| `-h-1` | No headers/dashes | Clean CSV body |
-| `-h 1` | Headers, no dashes | CSV with headers |
-| `-w 4000` | Line width | Wide tables |
-| `-o file` | Output to file | Export |
-| `-i file.sql` | Input from file | Complex queries, multi-statement |
-| `-F vertical` | One column per row | Exploration |
-| `SET NOCOUNT ON;` | Suppress row-affected messages | Always in scripts |
-
-### Piped Input
-
-```bash
-# Pipe SQL from stdin
-echo "SELECT TOP 5 * FROM dbo.FactSales" | sqlcmd -S "$FABRIC_SERVER" -d "$FABRIC_DB" -G
-
-# Here-doc for multi-statement
-cat <<'SQL' | sqlcmd -S "$FABRIC_SERVER" -d "$FABRIC_DB" -G
-SET NOCOUNT ON;
-SELECT COUNT(*) AS TotalRows FROM dbo.FactSales;
-SELECT TOP 3 ProductID, SUM(Amount) AS Total FROM dbo.FactSales GROUP BY ProductID ORDER BY Total DESC;
-SQL
-```
-
-### Parameterized Queries (sqlcmd Variables)
-
-```bash
-sqlcmd -S "$FABRIC_SERVER" -d "$FABRIC_DB" -G \
-  -v StartDate="2025-01-01" EndDate="2025-06-30" \
-  -Q "SET NOCOUNT ON; SELECT * FROM dbo.FactSales WHERE SaleDate BETWEEN '$(StartDate)' AND '$(EndDate)'" -W
-```
-
-For full reusable bash/PowerShell script templates, see [authoring-script-templates.md](authoring-script-templates.md).
 
 ## Monitoring Authoring Operations
 
 For full monitoring catalog see [SQLDW-CONSUMPTION-CORE.md § Monitoring and Diagnostics](../../../common/SQLDW-CONSUMPTION-CORE.md#monitoring-and-diagnostics).
 
-```bash
+```text
 # Active DML/DDL operations
-$SQLCMD -Q "SELECT request_id, session_id, command, status, total_elapsed_time/1000 AS sec FROM sys.dm_exec_requests WHERE command IN ('INSERT','UPDATE','DELETE','MERGE','CREATE TABLE','COPY') ORDER BY total_elapsed_time DESC" -W
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "SELECT request_id, session_id, command, status, total_elapsed_time/1000 AS sec
+   FROM sys.dm_exec_requests
+   WHERE command IN ('INSERT','UPDATE','DELETE','MERGE','CREATE TABLE','COPY')
+   ORDER BY total_elapsed_time DESC")
 
 # Recent ETL queries (last 24h)
-$SQLCMD -Q "SELECT TOP 20 distributed_statement_id, login_name, label, total_elapsed_time_ms FROM queryinsights.exec_requests_history WHERE start_time >= DATEADD(HOUR,-24,GETUTCDATE()) AND label LIKE 'ETL_%' ORDER BY total_elapsed_time_ms DESC" -W
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "SELECT TOP 20 distributed_statement_id, login_name, label, total_elapsed_time_ms
+   FROM queryinsights.exec_requests_history
+   WHERE start_time >= DATEADD(HOUR,-24,GETUTCDATE()) AND label LIKE 'ETL_%'
+   ORDER BY total_elapsed_time_ms DESC")
 
 # Failed writes (last 7d) — detect snapshot conflicts
-$SQLCMD -Q "SELECT TOP 10 distributed_statement_id, command, start_time, status FROM queryinsights.exec_requests_history WHERE status='Failed' AND start_time >= DATEADD(DAY,-7,GETUTCDATE()) ORDER BY start_time DESC" -W
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "SELECT TOP 10 distributed_statement_id, command, start_time, status
+   FROM queryinsights.exec_requests_history
+   WHERE status='Failed' AND start_time >= DATEADD(DAY,-7,GETUTCDATE())
+   ORDER BY start_time DESC")
 
 # Kill a stuck session (Admin role)
-$SQLCMD -Q "KILL '<distributed_statement_id>'"
+fabric-sqlendpoint-execute_query(workspaceId, itemId,
+  "KILL '<distributed_statement_id>'")
 ```
 
 ## Agent Integration Notes
 
-- **GitHub Copilot CLI**: Generate `sqlcmd` one-liners for DDL/DML or complete `.sql` + `.sh` file pairs. Ensure `-G` and `-d` in output. For COPY INTO, remind user about Storage Blob Data Reader role.
-- **Claude Code / Cowork**: Run `sqlcmd -Q "..."` via `bash` tool directly. For multi-statement authoring (procedures, transactions): write `.sql` file first, then execute with `-i`. Always verify `sqlcmd` availability and `az login` before first use. After writes: verify success by querying affected table.
+- **GitHub Copilot CLI / MCP-enabled agents**: Call `fabric-sqlendpoint-execute_query(workspaceId, itemId, query)` directly. For COPY INTO, remind user about Storage Blob Data Reader role on the storage account.
+- **Multi-batch workflows**: Call `fabric-sqlendpoint-execute_query` once per logical batch. No `GO` separators — each call is one batch.
 - **Common agent pattern**:
-  1. Discover schema (columns, types)
+  1. Discover schema (columns, types) via `fabric-sqlendpoint-execute_query`
   2. Formulate CTAS/DML with explicit CASTs
-  3. Execute via sqlcmd
-  4. Verify result (row count, sample)
-  5. Optionally generate reusable script
+  3. Execute via `fabric-sqlendpoint-execute_query(workspaceId, itemId, query)`
+  4. Verify result (row count, sample) via another `fabric-sqlendpoint-execute_query` call
+  5. Report results to user
+- **Rate limit awareness**: If performing many sequential operations, space calls ~3s apart to avoid 429 errors. Consolidate multiple statements into one batch when they don't require `GO` between them.
