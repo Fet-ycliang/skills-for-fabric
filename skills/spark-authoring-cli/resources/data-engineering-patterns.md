@@ -305,7 +305,16 @@ Guide LLM to generate MERGE with:
 
 ### Optimization Strategies
 Tell LLM to include:
-- **Z-Ordering**: `OPTIMIZE table_name ZORDER BY (frequently_filtered_column)` improves query speed
+- **Liquid Clustering (preferred over Z-Order and partitioning in Runtime 2.0+)**: Declarative, change-friendly clustering that replaces static partitioning and manual Z-Order maintenance
+  - Create: `CREATE TABLE t (...) CLUSTER BY (col1, col2)` or `ALTER TABLE t CLUSTER BY (col1, col2)`
+  - Apply: `OPTIMIZE table_name` (columns stored in metadata, no need to specify)
+  - Full recluster: `OPTIMIZE table_name FULL` (rebuilds all Z-Cubes)
+  - Change columns anytime: `ALTER TABLE t CLUSTER BY (new_col)` — applies on next OPTIMIZE
+  - Remove: `ALTER TABLE t CLUSTER BY NONE`
+  - **Runtime 2.0 incremental mode**: Only reclusters unclustered/unhealthy/small files (eliminates full-rewrite amplification)
+  - Pick 1–4 columns from frequent WHERE clauses; Hilbert curve for 2+ columns
+  - **CAUTION (Runtime 1.3)**: Full Z-Cube rewrite every run — do NOT combine with auto compaction
+- **Z-Ordering (legacy/Runtime 1.3)**: `OPTIMIZE table_name ZORDER BY (frequently_filtered_column)` — use only when liquid clustering is unavailable
 - **VACUUM**: `VACUUM table_name RETAIN 168 HOURS` cleans up old file versions after retention period
 - **Partition pruning**: Query with partition columns in WHERE clause to skip irrelevant data
 - **File compaction**: Run `OPTIMIZE` to combine small files into right-sized files (128MB-1GB)
@@ -350,6 +359,80 @@ Guide LLM to configure Spark sessions based on workload type:
 - Set in notebook first cell before any Spark operations
 - Configure at workspace level for consistent defaults
 - Override per-job for specific workload requirements
+
+### Runtime 2.0 Performance Features (Spark 4.1, Delta 4.2)
+
+> **⚠️ Public Preview**: [Fabric Runtime 2.0](https://learn.microsoft.com/en-us/fabric/data-engineering/runtime-2-0) (Spark 4.1, Delta Lake 4.x) is in **Public Preview**. Delta Lake 4.x features are experimental and should **not** be enabled for tables that interoperate across Fabric workloads. Only recommend the features below once the customer has explicitly accepted preview risk and validated on a non-production workspace — do not present them as default production guidance.
+
+**Native Execution Engine (NEE):**
+Significant performance improvement over open-source Spark via vectorized C++ execution. See [NEE documentation](https://learn.microsoft.com/en-us/fabric/data-engineering/native-execution-engine-overview) for current benchmarks.
+
+NEE must be enabled **before the session starts** — either via the environment-level Acceleration setting or with `%%configure` in the notebook's first cell. A post-start `spark.conf.set("spark.native.enabled", ...)` does **not** reliably enable it.
+```python
+%%configure
+{
+    "conf": {
+        "spark.native.enabled": "true"
+    }
+}
+```
+```text
+# Supported automatically once enabled:
+# - Python UDFs (scalar and vectorized/Pandas UDFs)
+# - Scala UDFs
+# - Complex types: arrays, maps, structs (explode, array_contains, map_keys, etc.)
+# - Vectorized CSV parsing
+# - OPTIMIZE on liquid clustered tables
+```
+
+**Efficient Scaledown (Remote Shuffle Manager):**
+Decouples shuffle data from executor lifetime for improved compute efficiency. Requires NEE enabled (set at session start, above). Set the full stack at session start via `%%configure` so it applies before Spark initializes. See [RSM documentation](https://learn.microsoft.com/en-us/fabric/data-engineering/efficient-scaledown-remote-shuffle-manager) for the complete option list and benchmarks.
+```python
+%%configure
+{
+    "conf": {
+        "spark.remote.shuffle.enabled": "true",
+        "spark.sql.rsm.decisionlayer.enabled.level": "stage",
+        "spark.sql.adaptive.shuffleWrite.enabled": "true",
+        "spark.storage.decommission.shuffleBlocks.enabled": "true",
+        "spark.storage.decommission.shuffleBlocks.cleanup": "true",
+        "spark.storage.decommission.shuffleBlocks.migrateToFallbackStorage": "true",
+        "spark.storage.decommission.fallbackStorage.cleanUp": "true",
+        "spark.dynamicAllocation.preventShutdownExecutorWithCache": "false",
+        "spark.dynamicAllocation.excludeDeltaSnapshotCache": "true"
+    }
+}
+```
+
+Key benefits:
+- Large shuffles → Azure Blob Storage (fault-tolerant, eliminates FetchFailedException)
+- Small shuffles → local disk (low latency), migrated on decommission
+- Autoscaler releases nodes immediately after task completion
+- **Prerequisites**: NEE enabled + Autoscale recommended
+
+**Incremental Liquid Clustering (Runtime 2.0+ only):**
+
+Incremental clustering and auto-reclustering are **enabled by default** in Runtime 2.0, so
+you normally don't set anything — `OPTIMIZE` reclusters only new, changed, or unhealthy files
+instead of rewriting whole Z-Cubes. The documented session toggles (both default `true`) are:
+
+```python
+# Master switch — set to False only to revert to full-rewrite behavior
+spark.conf.set("spark.microsoft.delta.optimize.clustering.strategy.incremental", "true")
+# Auto-detect and recluster overlapping files (applies only when incremental is on)
+spark.conf.set("spark.microsoft.delta.optimize.clustering.strategy.incremental.autoRecluster", "true")
+```
+
+See [Liquid clustering — Configuration reference](https://learn.microsoft.com/fabric/data-engineering/liquid-clustering#configuration-reference)
+for the full set of tuning options.
+
+**Runtime 2.0 Key Components:**
+- Apache Spark 4.1, Delta Lake 4.2, Python 3.13, Java 21, Scala 2.13
+- PySpark native plotting API, Python Data Source API, Python UDTFs
+- Structured Streaming Arbitrary State API v2
+- **Breaking change**: Python upgrade requires re-publishing all Environments with libraries
+- **Deprecated**: WASB protocol for GPv2 accounts — use ABFS instead
+- **Deprecated**: SparkR (may be removed in future versions)
 
 ---
 

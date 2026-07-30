@@ -4,6 +4,58 @@ User-facing changes for the public Microsoft Fabric Skills release.
 
 ## [Unreleased]
 
+## [0.3.10] - 2026-07-30
+
+### Added
+- **`skills/e2e-fabric-cost-estimation`** -- new skill for estimating Microsoft Fabric workload costs before migration. Covers CU capacity sizing, billing-mode strategy (Reserved vs. PAYG vs. Autoscale Billing for Spark), storage/network pricing, SKU right-sizing, and multi-cloud source cost equivalence (Databricks/Synapse/HDInsight and other platforms). The skill instructs the agent to fetch prices live where public APIs exist (Azure Retail Prices API, AWS Price List, GCP Cloud Billing Catalog) and from official pricing pages or the customer's billing/usage data where they don't (Databricks, Snowflake, Teradata), rather than hardcoding them, and to surface the source and date with every quoted figure.
+
+**Baseline delta (without-skill vs with-skill):** Without the skill, cost-estimation prompts route to migration/authoring skills or produce hardcoded/guessed prices and inconsistent SKU sizing. With the skill, those prompts route to `e2e-fabric-cost-estimation` and produce a live-priced, source-cited estimate grounded in the documented SKU→CU map — verified by the routing tests (`tests/test_routing.py`) and the L1/L2 eval graders (`tests/evals/e2e-fabric-cost-estimation/eval.yaml`).
+- **`tests/evals/sqldw-consumption-cli/eval.yaml`, `tests/evals/sqldw-operations-cli/eval.yaml`** -- a
+  deterministic `tool-calls` grader (`tool-calls-mcp-execute-not-sqlcmd`) asserting the agent calls
+  `execute_query` and never shells out to `sqlcmd` (`az rest` control-plane discovery stays allowed).
+- **`tests/evals/sqldw-authoring-cli/eval.yaml`** -- a new Vally eval for `sqldw-authoring-cli` with the
+  same `execute_query`-not-`sqlcmd` `tool-calls` grader plus a Layer-2 program verifier, replacing the
+  skill's previous Vally-eval exemption.
+- **`tests/evals/_graders/sqldw-authoring-cli/verify-eval-smoke-orders-table.ps1`** -- Layer-2 program
+  verifier that confirms the authoring stimulus actually created the target table via the MCP path.
+- **`skills/eventschemaset-consumption-cli`** -- new read-only skill to list, inspect, and describe Microsoft Fabric Event Schema Sets via the Fabric Items REST API (`az rest` + `jq`): enumerate Event Schema Sets in a workspace, read item properties (OneLake root path, sensitivity label, tags), and retrieve then base64-decode the item definition to summarize its `eventTypes` and `schemas`.
+- **`activator-authoring-cli` and `activator-consumption-cli`** -- create and inspect alerts backed by Power BI reports and semantic models, including validated metric queries, personalized filters, and explicit handling of the current public readback limitation.
+
+### Changed
+- **`skills/sqldw-consumption-cli`, `skills/sqldw-authoring-cli`, `skills/sqldw-operations-cli`** -- the
+  primary T-SQL execution path is now the native `fabric-sqlendpoint-execute_query` MCP tool instead of
+  shelling out to `sqlcmd`. SKILL.md and `references/` updated to call
+  `execute_query(workspaceId, itemId, query)` (GUID-based identity, single-batch, no `GO`), document the
+  MCP limits (10,000-row cap, 300s timeout, 20 req/min), and keep `sqlcmd` only as a documented legacy
+  fallback. The Fabric SQL Endpoint MCP server (`fabric-sqlendpoint`) ships headerless in the
+  consumption/authoring/operations plugins and authenticates lazily via Copilot's native session.
+- **`skills/semantic-model-authoring`** -- Added a metadata-discovery capability using DAX `INFO` functions (new `references/metadata-discovery.md` + `Discover Semantic Model Metadata` workflow). 
+- **`tests/evals/semantic-model-authoring/eval.yaml`** -- Added an `INFO`-function metadata-discovery stimulus, ported from the `semantic-model-consumption` discovery coverage.
+
+### Removed
+- **`skills/semantic-model-consumption`** -- Removed. Its capabilities are now split between two skills: semantic-model metadata discovery (DAX `INFO` functions) moved into `semantic-model-authoring`, and natural-language data queries are handled by `fabriciq`.
+
+### Fixed
+- **`skills/sqldw-operations-cli/references/query-reference.md`** -- clarified that the MCP tool does not
+  support sqlcmd-style external parameter substitution (in-batch `DECLARE` T-SQL variables are fine), and
+  changed the `DATEADD(..., -N, ...)` parameter-table defaults to positive `N` so substitution no longer
+  produces a double-negative.
+- **`skills/sqldw-consumption-cli/references/discovery-queries.md`** -- removed leftover `sqlcmd` artifacts
+  (`$SQLCMD -Q ... -W`); query blocks now show plain T-SQL (the `query` parameter value) in `sql`-tagged fences.
+- **SQL DW `SKILL.md` connection snippets** -- the workspace-discovery step now captures the result into
+  `WS_ID` before reusing it, so the copy/paste flow works end-to-end. Bare code fences are language-tagged,
+  and a note clarifies that the concrete MCP tool name may be prefixed.
+- **`skills/sqldw-consumption-cli/references/script-templates.md`** -- export template lists explicit
+  columns (no `SELECT *`) with a stable `ORDER BY` key.
+- **`skills/sqldw-authoring-cli/references/authoring-cli-quickref.md`** -- upsert example wrapped in
+  `TRY/CATCH` with `ROLLBACK` + `THROW` for safe transaction handling.
+- **`skills/sqldw-authoring-cli/references/authoring-script-templates.md`** -- added a placeholders note for
+  the illustrative storage URLs, dates, and `LABEL` values.
+- **SQL DW `SKILL.md` + quickref `itemId` guidance** -- clarified that for a Lakehouse the `itemId` must be
+  the SQL analytics endpoint id (`properties.sqlEndpointProperties.id`), not the lakehouse item id.
+- **`hdinsight-migration`** - corrected HDFS guidance and improved routing for Oozie action migration requests.
+- **`sqldb-operations-cli`** -- avoid installing SQL client tooling during diagnostics by using an available PowerShell SqlClient provider when an installed `sqlcmd` client cannot authenticate, or reporting that no compatible preinstalled TDS client is available.
+
 ## [0.3.9] - 2026-07-23
 
 ### Added

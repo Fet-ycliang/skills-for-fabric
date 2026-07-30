@@ -84,10 +84,15 @@ During schema verification (Stage 12):
 
 ## KQL patterns
 
+> **Query convention.** Mirrored telemetry tables are **external tables** — query
+> them via `external_table('<name>')` (they do not appear in `.show tables`).
+> Business tables that live as **managed** tables in an Eventhouse are
+> queried by their bare name. The examples below wrap telemetry accordingly.
+
 ### Inspect schema
 
 ```kusto
-TableName
+external_table('<TableName>')
 | getschema
 | project ColumnName, ColumnType
 ```
@@ -95,7 +100,7 @@ TableName
 ### Sample dynamic properties
 
 ```kusto
-AppEvents
+external_table('AppEvents')
 | take 10
 | project TimeGenerated, Name, Properties
 ```
@@ -103,7 +108,7 @@ AppEvents
 ### Extract possible business identifiers
 
 ```kusto
-AppEvents
+external_table('AppEvents')
 | extend BookingId = tostring(Properties.BookingId)
 | project TimeGenerated, Name, BookingId
 ```
@@ -111,7 +116,7 @@ AppEvents
 ### Alternative casing / naming (coalesce)
 
 ```kusto
-AppEvents
+external_table('AppEvents')
 | extend BookingId = coalesce(
     tostring(Properties.BookingId),
     tostring(Properties.bookingId),
@@ -128,7 +133,7 @@ Comparing them with `tostring(...) == "True"` silently matches **nothing**.
 Cast to the real type and compare to a typed literal:
 
 ```kusto
-AppEvents
+external_table('AppEvents')
 | where tobool(Properties.faulted) == true          // NOT tostring(...) == "True"
 | extend amount = toreal(Properties.amount),
          retries = tolong(Properties.retryCount)
@@ -141,7 +146,7 @@ type and distinct values before assuming the data is absent — a type/casing
 mismatch is the most common cause:
 
 ```kusto
-AppEvents
+external_table('AppEvents')
 | extend f = Properties.faulted
 | summarize count() by value = tostring(f), type = gettype(f)
 ```
@@ -149,7 +154,7 @@ AppEvents
 ### Validate a direct join
 
 ```kusto
-AppEvents
+external_table('AppEvents')
 | extend BookingId = tostring(Properties.BookingId)
 | where isnotempty(BookingId)
 | join kind=inner (

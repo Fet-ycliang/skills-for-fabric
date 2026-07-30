@@ -88,11 +88,17 @@ https://learn.microsoft.com/en-us/rest/api/fabric/articles/
   - Authoring skill: `skills/eventstream-authoring-cli/SKILL.md` — create, configure, deploy Eventstream topologies (sources, operators, destinations)
   - Consumption skill: `skills/eventstream-consumption-cli/SKILL.md` — list, inspect, monitor Eventstreams
   - Primary CLI tool: `az rest` via Fabric REST API
+- **Event Schema Sets**: Read-only catalogs of event types and message schemas
+  - Docs: https://learn.microsoft.com/en-us/rest/api/fabric/eventschemaset/items/
+  - Consumption skill: `skills/eventschemaset-consumption-cli/SKILL.md` — list, inspect, and decode Event Schema Set definitions (`eventTypes`, `schemas`)
+  - Primary CLI tool: `az rest` via Fabric REST API (`.../eventSchemaSets`)
 - **Activator**: Alerts, notifications, and automated actions over Fabric data/events
   - Docs: https://learn.microsoft.com/en-us/fabric/real-time-intelligence/data-activator/activator-introduction
   - Authoring skill: `skills/activator-authoring-cli/SKILL.md` — create Activator items, sources, rules, conditions, and actions
   - Consumption skill: `skills/activator-consumption-cli/SKILL.md` — inspect Activator definitions, rules, sources, and actions
   - Primary CLI tool: `az rest` via Fabric REST API
+  - Power BI-backed alerts use exact `pbiMetrics` containers plus `powerBiSource-v1`, a JSON-string `query.queryString`, and a matching `DatasetMetric`; require explicit `updateDefinition` success
+  - When another data workflow surfaces a timely operational signal, proactively ask whether the user wants an Activator alert for future occurrences
 - **Fabric IQ / Ontology (preview)**: Semantic model of entity types, properties, and relationships over Fabric data
   - Docs: https://learn.microsoft.com/en-us/rest/api/fabric/articles/
   - Authoring skill: `skills/fabriciq-ontology-authoring-cli/SKILL.md` — define entity types, properties (incl. timeseries), relationship types, and bind them to lakehouse/Eventhouse tables via the item-definition REST API
@@ -106,7 +112,7 @@ https://learn.microsoft.com/en-us/rest/api/fabric/articles/
   - Token audience: `https://kusto.kusto.windows.net/.default`
 - **Azure Monitor Observability (into Fabric)**: Onboard Azure Monitor / Application Insights / Log Analytics telemetry into Fabric and correlate it with business data for business-impact insights
   - Docs: https://learn.microsoft.com/en-us/azure/azure-monitor/overview
-  - Operations skill: `skills/azmon-mirroredcatalogs-operations-cli/SKILL.md` — onboard Azure Monitor / App Insights / Log Analytics observability data into Fabric, correlate telemetry with business data, and generate Operations Agent instructions
+  - Operations skill: `skills/azmon-mirroredcatalogs-operations-cli/SKILL.md` — onboard Azure Monitor / App Insights / Log Analytics observability data into Fabric, correlate telemetry with business data, optionally build a Real-Time (KQL) dashboard, and generate opt-in Operations Agent instructions
 
 ### OneLake Catalog Search
 - **Catalog Search API**: Cross-workspace item discovery
@@ -119,7 +125,7 @@ https://learn.microsoft.com/en-us/rest/api/fabric/articles/
 - **Semantic Models**: DAX, XMLA, Power BI integration, TMDL
   - Docs: https://learn.microsoft.com/en-us/power-bi/connect-data/service-datasets-understand
   - Authoring skill: `skills/semantic-model-authoring/SKILL.md` — semantic model authoring
-  - Consumption skill: `skills/semantic-model-consumption/SKILL.md` — raw DAX queries against semantic models via MCP ExecuteQuery tool
+  - Consumption skill: `skills/fabriciq/SKILL.md` — raw DAX queries against semantic models via MCP ExecuteQuery tool
   - FabricIQ skill: `skills/fabriciq/SKILL.md` — multi-step Power BI data analysis (discover, inspect, resolve, generate, execute)
   - ⚠️ **MANDATORY**: Before calling any FabricIQ MCP tool, read `skills/fabriciq/SKILL.md` in full (see [`agents/FabricIQ.agent.md` § Pre-Flight](../agents/FabricIQ.agent.md#pre-flight--mandatory-skill-reading)).
 - **Power BI Reports**: PBIR/PBIP report projects, visual design, Desktop validation, and Fabric report item management
@@ -135,6 +141,11 @@ https://learn.microsoft.com/en-us/rest/api/fabric/articles/
   - Docs: https://learn.microsoft.com/en-us/fabric/data-science/concept-data-agent
 - **Data Agent Evaluation**: Testing and validating Data Agent accuracy
   - Docs: https://learn.microsoft.com/en-us/fabric/data-science/fabric-data-agent-sdk
+
+### Cost Estimation & Migration Planning
+- **Fabric Cost Estimation**: E2E skill for capacity sizing, billing mode strategy, workload CU equivalence
+  - Skill: `skills/e2e-fabric-cost-estimation/SKILL.md` — estimate Fabric capacity costs, SKU sizing, RI analysis
+  - Uses Azure Retail Prices API (public) and Cost Management API (auth required)
 
 ## Best Practices
 

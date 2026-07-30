@@ -6,6 +6,13 @@
       "headers": {
         "X-VARIANTS": "Fabric.Routing.PowerBIDataExploration"
       }
+    },
+    "fabric-sqlendpoint": {
+      "type": "http",
+      "url": "https://api.fabric.microsoft.com/v1/mcp/dataPlane/sqlEndpoint",
+      "tools": [
+        "execute_query"
+      ]
     }
   }
 }

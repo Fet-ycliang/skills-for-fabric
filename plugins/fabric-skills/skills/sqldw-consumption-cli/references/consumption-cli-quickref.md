@@ -1,88 +1,81 @@
 # Consumption CLI Quick Reference
 
-Concise `sqlcmd` output formatting, monitoring queries, and agent tips. For full T-SQL patterns, see [SQLDW-CONSUMPTION-CORE.md](../../../common/SQLDW-CONSUMPTION-CORE.md). For full reusable scripts, see [script-templates.md](script-templates.md).
+Concise MCP `fabric-sqlendpoint-execute_query` patterns, monitoring queries, and agent tips. For full T-SQL patterns, see [SQLDW-CONSUMPTION-CORE.md](../../../common/SQLDW-CONSUMPTION-CORE.md). For workflow templates, see [script-templates.md](script-templates.md).
 
-All examples assume reusable connection variables are set:
+> **Note:** All T-SQL execution uses the `fabric-sqlendpoint-execute_query` MCP tool. See [SKILL.md § Tool Stack](../SKILL.md#tool-stack) for tool signature and limits.
 
-```bash
-FABRIC_SERVER="<endpoint>.datawarehouse.fabric.microsoft.com"
-FABRIC_DB="<WarehouseName>"
-SQLCMD="sqlcmd -S $FABRIC_SERVER -d $FABRIC_DB -G"
+## Query Patterns
+
+### Single Query
+
+```text
+fabric-sqlendpoint-execute_query(workspaceId, itemId, "SET NOCOUNT ON; SELECT * FROM dbo.FactSales WHERE SaleDate >= '2025-01-01'")
 ```
 
-## Script Generation
+### Multi-Statement (Single Batch)
 
-### Bash Template
+Multiple statements can be combined in a single batch (no `GO` required):
 
-See [script-templates.md](script-templates.md) for full bash and PowerShell templates.
-
-Key pattern for script generation:
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-FABRIC_SERVER="${FABRIC_SERVER:?Set FABRIC_SERVER env var}"
-FABRIC_DB="${FABRIC_DB:?Set FABRIC_DB env var}"
-command -v sqlcmd >/dev/null 2>&1 || { echo "ERROR: sqlcmd not found. Install: winget install sqlcmd"; exit 1; }
-az account show >/dev/null 2>&1 || { echo "Run 'az login' first."; exit 1; }
-
-sqlcmd -S "$FABRIC_SERVER" -d "$FABRIC_DB" -G \
-  -Q "SET NOCOUNT ON; SELECT * FROM dbo.FactSales WHERE SaleDate >= '2025-01-01'" \
-  -W -s"," -h-1 -o results.csv
-echo "Results written to results.csv"
-```
-
-### sqlcmd Output Formatting Flags
-
-| Flag | Purpose | When |
-|---|---|---|
-| `-W` | Trim trailing spaces | Always |
-| `-s","` | Column separator | CSV export |
-| `-s"\t"` | Tab separator | TSV export |
-| `-h-1` | No headers/dashes | Clean CSV body |
-| `-h 1` | Headers, no dashes | CSV with headers |
-| `-w 4000` | Line width | Wide tables |
-| `-o file` | Output to file | Export |
-| `-i file.sql` | Input from file | Complex queries |
-| `-F vertical` | One column per row | Exploration |
-| `SET NOCOUNT ON;` | Suppress row-affected messages | Always in scripts |
-
-### Piped Input
-
-```bash
-# Pipe SQL from stdin
-echo "SELECT TOP 5 * FROM dbo.FactSales" | sqlcmd -S "$FABRIC_SERVER" -d "$FABRIC_DB" -G
-
-# Here-doc for multi-statement
-cat <<'SQL' | sqlcmd -S "$FABRIC_SERVER" -d "$FABRIC_DB" -G
+```text
+fabric-sqlendpoint-execute_query(workspaceId, itemId, "
 SET NOCOUNT ON;
 SELECT COUNT(*) AS TotalRows FROM dbo.FactSales;
-SELECT TOP 3 ProductID, SUM(Amount) AS Total FROM dbo.FactSales GROUP BY ProductID ORDER BY Total DESC;
-SQL
+")
 ```
 
-### Parameterized Queries (sqlcmd Variables)
+> **Note:** If you need multiple result sets, use separate `fabric-sqlendpoint-execute_query` calls. The MCP tool returns only the last result set in a multi-statement batch.
 
-```bash
-sqlcmd -S "$FABRIC_SERVER" -d "$FABRIC_DB" -G \
-  -v StartDate="2025-01-01" EndDate="2025-06-30" \
-  -Q "SET NOCOUNT ON; SELECT * FROM dbo.FactSales WHERE SaleDate BETWEEN '$(StartDate)' AND '$(EndDate)'" -W
+### Parameterized Date Ranges
+
+Use string interpolation in the query text (no sqlcmd variables):
+
+```text
+fabric-sqlendpoint-execute_query(workspaceId, itemId, "
+SET NOCOUNT ON;
+SELECT * FROM dbo.FactSales
+WHERE SaleDate BETWEEN '2025-01-01' AND '2025-06-30'
+ORDER BY SaleDate
+")
+```
+
+### Large Result Handling
+
+The MCP tool caps at ~10,000 rows (an observed default, not a documented contract — verify against live truncation). For large datasets:
+
+```text
+-- Step 1: Check total count
+fabric-sqlendpoint-execute_query(workspaceId, itemId, "SELECT COUNT(*) AS total FROM dbo.FactSales WHERE SaleDate >= '2025-01-01'")
+
+-- Step 2: Page through if needed (using OFFSET/FETCH). List only the columns you
+-- need -- narrow selects reduce the chance of hitting the ~10,000-row/payload cap.
+fabric-sqlendpoint-execute_query(workspaceId, itemId, "
+SELECT SaleID, SaleDate, ProductKey, CustomerKey, Quantity, Amount FROM dbo.FactSales
+WHERE SaleDate >= '2025-01-01'
+ORDER BY SaleID
+OFFSET 0 ROWS FETCH NEXT 10000 ROWS ONLY
+")
 ```
 
 ## Monitoring and Performance
 
-For full query catalog see [SQLDW-CONSUMPTION-CORE.md § Monitoring and Diagnostics](../../../common/SQLDW-CONSUMPTION-CORE.md#monitoring-and-diagnostics) and [script-templates.md § Performance Investigation](script-templates.md#bash--performance-investigation).
+For full query catalog see [SQLDW-CONSUMPTION-CORE.md § Monitoring and Diagnostics](../../../common/SQLDW-CONSUMPTION-CORE.md#monitoring-and-diagnostics) and [script-templates.md § Performance Investigation](script-templates.md#performance-investigation-workflow).
 
-```bash
+```text
 # Active queries
-$SQLCMD -Q "SELECT request_id, session_id, command, status, total_elapsed_time/1000 AS elapsed_sec FROM sys.dm_exec_requests WHERE status='running' ORDER BY total_elapsed_time DESC" -W
-
-# Kill a stuck session (Admin role)
-$SQLCMD -Q "KILL '<distributed_statement_id>'"
+fabric-sqlendpoint-execute_query(workspaceId, itemId, "SELECT request_id, session_id, command, status, total_elapsed_time/1000 AS elapsed_sec FROM sys.dm_exec_requests WHERE status='running' ORDER BY total_elapsed_time DESC")
 ```
+
+> Session termination (`KILL`) is an operational/admin action outside this read-only skill's scope.
+
+## Script Generation
+
+When the user asks for a reusable script (not an agent workflow), you can generate a standalone bash/PowerShell script. Use `az rest` for control-plane discovery (workspace/item IDs); for T-SQL execution outside an agent, use the **Legacy CLI Fallback** (`sqlcmd`) documented in [script-templates.md § Legacy CLI Fallback](script-templates.md#legacy-cli-fallback). Note: `curl` only covers OneLake file access — it cannot execute T-SQL against a SQL endpoint. For agent workflows, see [script-templates.md](script-templates.md).
 
 ## Agent Integration Notes
 
-- **GitHub Copilot CLI**: `gh copilot suggest -t shell` for `sqlcmd` one-liners; ensure `-G` and `-d` in output; use "explain" mode for errors.
-- **Claude Code / Cowork**: run `sqlcmd -Q "..."` via `bash` tool; follow the Agentic Workflow in [SKILL.md](../SKILL.md); produce scripts using [script-templates.md](script-templates.md).
-- Always verify `sqlcmd` availability before first SQL operation.
+- **All AI agents**: Use the `fabric-sqlendpoint-execute_query` MCP tool directly. No shell commands needed for SQL execution.
+- **GitHub Copilot CLI / VS Code**: The MCP tool appears in the tool list automatically when the server is registered.
+- **Claude Code / Cowork / Cursor / Windsurf**: Verify `fabric-sqlendpoint-execute_query` is in the available tools before proceeding.
+- **Rate limiting**: Space out calls if running multi-step investigations (max 20 req/min per identity).
+- **Workspace/item discovery**: Use `az rest` for control-plane operations (finding workspace ID, item ID).
+

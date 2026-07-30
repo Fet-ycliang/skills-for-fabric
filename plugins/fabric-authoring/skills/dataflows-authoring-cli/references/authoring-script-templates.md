@@ -1462,7 +1462,7 @@ For schemas, decision tree, credential variants, and pitfalls, see [connection-m
 
 ### Bash — Create Cloud SQL Connection (Basic auth)
 
-Schema-accurate `POST /v1/connections`. Uses `passwordReference` (Key Vault-backed via a Fabric Key Vault connection) by default; falls back to plaintext only if `KV_CONN_ID` is unset.
+Schema-accurate `POST /v1/connections` using `passwordReference` (Key Vault-backed via a Fabric Key Vault connection).
 
 ```bash
 #!/usr/bin/env bash
@@ -1475,6 +1475,8 @@ DISPLAY_NAME="${DISPLAY_NAME:?Set DISPLAY_NAME (e.g. ContosoSqlConnection)}"
 SQL_SERVER="${SQL_SERVER:?Set SQL_SERVER}"
 SQL_DATABASE="${SQL_DATABASE:?Set SQL_DATABASE}"
 SQL_USER="${SQL_USER:?Set SQL_USER}"
+KV_CONN_ID="${KV_CONN_ID:?Set KV_CONN_ID to the Fabric Key Vault connection id}"
+KV_SECRET_NAME="${KV_SECRET_NAME:?Set KV_SECRET_NAME}"
 
 command -v az >/dev/null 2>&1 || { echo "ERROR: az CLI not found."; exit 1; }
 command -v jq >/dev/null 2>&1 || { echo "ERROR: jq not found."; exit 1; }
@@ -1486,19 +1488,12 @@ az rest --method get --resource "$RESOURCE" \
   --query "value[?type=='SQL'].creationMethods[].parameters[].{name:name,dataType:dataType,required:required}" \
   --output table
 
-# Step 2 — build credentials block (KV reference preferred)
-if [[ -n "${KV_CONN_ID:-}" && -n "${KV_SECRET_NAME:-}" ]]; then
-  CREDENTIALS=$(jq -n \
-    --arg user "$SQL_USER" \
-    --arg kvConn "$KV_CONN_ID" --arg secret "$KV_SECRET_NAME" \
-    '{ credentialType: "Basic", username: $user,
-       passwordReference: { connectionId: $kvConn, secretName: $secret } }')
-else
-  echo "WARNING: using plaintext SQL_PASSWORD (local testing only — do not commit)" >&2
-  : "${SQL_PASSWORD:?Set KV_CONN_ID + KV_SECRET_NAME, OR SQL_PASSWORD for testing}"
-  CREDENTIALS=$(jq -n --arg user "$SQL_USER" --arg pw "$SQL_PASSWORD" \
-    '{ credentialType: "Basic", username: $user, password: $pw }')
-fi
+# Step 2 — build the Key Vault-backed credentials block
+CREDENTIALS=$(jq -n \
+  --arg user "$SQL_USER" \
+  --arg kvConn "$KV_CONN_ID" --arg secret "$KV_SECRET_NAME" \
+  '{ credentialType: "Basic", username: $user,
+     passwordReference: { connectionId: $kvConn, secretName: $secret } }')
 
 # Step 3 — assemble the request body
 BODY=$(jq -n \
@@ -1537,16 +1532,15 @@ echo "    Use NEW_CONN_ID with the Bash — Bind Connection template above."
 
 ```powershell
 # Schema-accurate POST /v1/connections (cloud, Basic auth)
-# Prefers passwordReference (Key Vault-backed via a Fabric Key Vault connection).
+# Requires passwordReference (Key Vault-backed via a Fabric Key Vault connection).
 
 param(
     [Parameter(Mandatory=$true)] [string]$DisplayName,
     [Parameter(Mandatory=$true)] [string]$Server,
     [Parameter(Mandatory=$true)] [string]$Database,
     [Parameter(Mandatory=$true)] [string]$Username,
-    [string]$KvConnectionId,
-    [string]$KvSecretName,
-    [string]$PlainPassword  # local testing only
+    [Parameter(Mandatory=$true)] [string]$KvConnectionId,
+    [Parameter(Mandatory=$true)] [string]$KvSecretName
 )
 
 $api      = "https://api.fabric.microsoft.com/v1"
@@ -1558,18 +1552,14 @@ az rest --method get --resource $resource `
     --query "value[?type=='SQL'].creationMethods[].parameters[].{name:name,required:required}" `
     --output table
 
-# Step 2 — build credentials block
-if ($KvConnectionId -and $KvSecretName) {
-    $credentials = @{
-        credentialType = "Basic"
-        username = $Username
-        passwordReference = @{ connectionId = $KvConnectionId; secretName = $KvSecretName }
+# Step 2 — build the Key Vault-backed credentials block
+$credentials = @{
+    credentialType = "Basic"
+    username = $Username
+    passwordReference = @{
+        connectionId = $KvConnectionId
+        secretName = $KvSecretName
     }
-} elseif ($PlainPassword) {
-    Write-Warning "Using plaintext password — local testing only; do not commit."
-    $credentials = @{ credentialType = "Basic"; username = $Username; password = $PlainPassword }
-} else {
-    throw "Provide -KvConnectionId + -KvSecretName, or -PlainPassword for testing."
 }
 
 # Step 3 — assemble request body

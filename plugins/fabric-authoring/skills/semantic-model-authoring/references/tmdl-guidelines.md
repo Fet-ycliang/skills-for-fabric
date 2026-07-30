@@ -190,7 +190,6 @@ relationship 'Sales - Ship Date to Date'
 - Hide foreign keys on fact tables (`isHidden: true`)
 - No composite keys - use a single surrogate integer key
 - No surrogate keys on fact tables - use natural keys where possible
-- Don't set `isKey = true` on the primary key column of dimension tables for non Direct Query models.
   
 ---
 

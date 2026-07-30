@@ -1,8 +1,9 @@
-# Application Insights / Azure Monitor table reference
+# Telemetry & source table reference
 
-Common Application Insights / Azure Monitor (Log Analytics) telemetry tables, what
-signal each contains, the operational questions it answers, and how it can
-correlate with business data.
+Common Azure Monitor (Log Analytics) source tables the skill mirrors and analyzes
+— Application Insights (`App*`), OpenTelemetry-native (`OTel*`), and custom
+security (`XD*`) tables — what signal each contains, the operational questions it
+answers, and how it can correlate with business data.
 
 > **Not a schema guarantee.** These are common shapes only. The **actual** schema
 > must always be verified against the real Eventhouse / KQL database with
@@ -125,6 +126,48 @@ correlate with business data.
 - **Signal:** usage/volume of events, page views, sessions over time.
 - **Business correlation:** traffic drop → usage KPI degradation (active users,
   transactions, revenue events).
+
+## OpenTelemetry tables (`OTel*`)
+
+OpenTelemetry-native tables produced by the OTLP ingestion path — distinct from
+the Application Insights `App*` tables. The documented example is **`OTelLogs`**;
+additional `OTel*` traces/metrics tables may appear as that ingestion path
+expands.
+
+- **Signal:** OpenTelemetry logs / traces / metrics — log records, spans, and
+  resource/scope attributes.
+- **Operational questions:** What did OTel-instrumented services emit around an
+  incident? Which spans failed or slowed?
+- **Business correlation:** business keys often live in OTel resource/span
+  attributes — confirm via `getschema` + sampling.
+- **Note:** column/attribute shapes vary by SDK and semantic-convention version;
+  always verify the real schema, never assume from the prefix.
+
+## Custom security tables (`XD*`)
+
+**Custom, security-related log tables** — tenant/deployment-defined, **not** a
+built-in Azure Monitor family. Custom Azure Monitor tables are created via DCR /
+Data Collector and often carry a `_CL` suffix, so real names may look like
+`XD…_CL`. Because they are custom:
+
+- **Domain-agnostic:** never assume `XD*` schema, columns, or meaning from the
+  prefix. Discover the real tables, run `getschema`, sample, and confirm meaning
+  with the user before use.
+- **Signal:** security / detection events (deployment-specific).
+- **Business correlation:** security incidents → customer / tenant / transaction
+  impact; SLA of security-sensitive flows.
+- **Precedence:** only in-scope for a workspace that passed Stage 4 validation (a
+  supported, validated workspace); table selection must not bypass an
+  unsupported-workspace block.
+
+## Default mirror set
+
+Unless the user specifies otherwise, the skill's **default set to mirror** is every
+**discovered** table matching `App*`, `OTel*`, or `XD*` (case-insensitive; tolerate
+the `_CL` suffix), after which it **asks the user for any additional tables**.
+Prefixes match real discovery output only; resolve to the **narrowest common
+`Selectable` scope** and disclose any extra sibling tables (see SKILL.md Stage 6 →
+"Default mirror set").
 
 ## Common cloud/role/location fields (across App* tables)
 

@@ -108,7 +108,10 @@ Create IncidentBin. Each IncidentBin is one 5-minute window and is the unit of
 analysis for rules and alerts.
 
 IncidentBin materialization query (output columns == alert fields):
-<OperationalTable>
+(Telemetry tables are external tables → query via external_table('<name>'). The
+business table is bare if it is a managed table, or external_table('<name>') if
+it too is a OneLake shortcut.)
+external_table('<OperationalTable>')
 | where <OperationalTimestampColumn> between (datetime(<MinTime>) .. datetime(<MaxTime>))
 | extend BusinessKey = tostring(Properties.<KeyName>)
 | where isnotempty(BusinessKey)
@@ -162,7 +165,7 @@ Start with POC thresholds to confirm Start runs and a Teams alert arrives, then
 switch to production-like thresholds for steady-state monitoring.
 ```
 
-## Creating the agent (optional Stage 16)
+## Creating the agent (optional Stage 17)
 
 Operations Agent is a first-class Fabric item (`type: "OperationsAgent"`), so it
 can be created and populated through documented Fabric item APIs.

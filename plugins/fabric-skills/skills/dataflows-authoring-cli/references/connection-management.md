@@ -241,7 +241,7 @@ az rest --method post \
   --query "{id:id, name:displayName, type:connectionDetails.type, path:connectionDetails.path}"
 ```
 
-> **Plaintext fallback.** Replace `passwordReference` with `"password": "$SQL_PASSWORD"` only for local testing. **Never** commit plaintext credentials. Inject via `read -s` or env from a secret store.
+> **Secret-safe generation.** Use `passwordReference` in generated examples; do not render a plaintext credential field even as an unsafe or local-testing example. Never commit plaintext credentials, and never echo or log runtime secret values.
 
 > **⚠ Unknown credential keys are silently dropped.** Fabric does **not** return `400` for unknown keys inside `credentialDetails.credentials` — it discards them and proceeds with the recognized fields that remain. A typo like `passWord` instead of `password` produces a `201 Created` with no usable credential, and the first refresh then fails with a generic `IncorrectCredentials`. **Validate your request body's credential keys against the discovered schema from Step 1 before POSTing.**
 
@@ -289,7 +289,7 @@ The full union accepted by **`CreateCredentialDetails.credentials`** for `Sharea
 }
 ```
 
-> **Chicken-and-egg.** A Key Vault reference points at *another Fabric connection* (a Key Vault connection) that already exists. If you do not have one, you must either (a) create the Key Vault connection first via this same API or (b) use the plaintext field for one-off / dev usage.
+> **Chicken-and-egg.** A Key Vault reference points at *another Fabric connection* (a Key Vault connection) that already exists. If you do not have one, create the Key Vault connection first via this same API or pause and request that prerequisite; generated templates should not silently downgrade to plaintext credentials.
 
 ### Service principal example
 

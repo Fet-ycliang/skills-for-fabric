@@ -29,6 +29,7 @@ env:
       {"option":"SQL database","slug":"sqldb","label":"area:sqldb","color":"c5def5"},
       {"option":"Dataflows Gen2","slug":"dataflows","label":"area:dataflows","color":"1d76db"},
       {"option":"Eventhouse / KQL","slug":"eventhouse","label":"area:eventhouse","color":"e99695"},
+      {"option":"Event Schema Set / Real-Time Intelligence","slug":"eventschemaset","label":"area:eventschemaset","color":"1f6feb"},
       {"option":"Eventstream / Real-Time Intelligence","slug":"eventstream","label":"area:eventstream","color":"b60205"},
       {"option":"Activator / Reflex","slug":"activator","label":"area:activator","color":"c2e0c6"},
       {"option":"OneLake Catalog (search / discovery)","slug":"catalog","label":"area:catalog","color":"d93f0b"},
@@ -37,6 +38,7 @@ env:
       {"option":"Power BI Reports","slug":"powerbi-report","label":"area:powerbi-report","color":"d4c5f9"},
       {"option":"Fabric IQ / Ontology","slug":"fabriciq","label":"area:fabriciq","color":"0969da"},
       {"option":"Azure Monitor into Fabric","slug":"azmon","label":"area:azmon","color":"0e8a16"},
+      {"option":"Fabric cost estimation","slug":"cost-estimation","label":"area:cost-estimation","color":"c2e0c6"},
       {"option":"Infrastructure / repo / CI / general (or not sure)","slug":"platform","label":"area:platform","color":"fef2c0"}
     ]
 

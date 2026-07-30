@@ -160,6 +160,58 @@ When a user provides a real public dataset URL (HTTP/HTTPS), prefer ingesting th
 
 ---
 
+## Notebook Orchestration — Parallel Run + DAG Dependencies
+
+To run notebooks in parallel and/or express run-order dependencies **from inside
+a notebook**, use `notebookutils.notebook.runMultiple(DAG)` — **not** hand-rolled
+`threading`/`concurrent.futures`. Activities with no `dependencies` start together
+(bounded by `concurrency`); an activity with `dependencies` waits until all listed
+upstream activities finish.
+
+```python
+import notebookutils
+
+# Run 3 notebooks in parallel, then a 4th that waits for all three to complete.
+DAG = {
+    "activities": [
+        {"name": "ingest_a", "path": "Notebook_A", "args": {}, "timeoutPerCellInSeconds": 900},
+        {"name": "ingest_b", "path": "Notebook_B", "args": {}, "timeoutPerCellInSeconds": 900},
+        {"name": "ingest_c", "path": "Notebook_C", "args": {}, "timeoutPerCellInSeconds": 900},
+        {
+            "name": "aggregate",
+            "path": "Notebook_D",
+            "args": {},
+            "timeoutPerCellInSeconds": 900,
+            "dependencies": ["ingest_a", "ingest_b", "ingest_c"],  # waits for all three
+        },
+    ],
+    "timeoutInSeconds": 3600,
+    "concurrency": 3,  # max activities to run in parallel (omit to use the platform default)
+}
+
+notebookutils.notebook.validateDAG(DAG)            # catch duplicate names / missing / circular deps first
+results = notebookutils.notebook.runMultiple(DAG)  # -> {activity_name: {"exitVal": ..., "exception": ...}}
+
+# A child notebook returns a value via notebookutils.notebook.exit(value):
+aggregate_exit = results["aggregate"]["exitVal"]
+```
+
+### Principles
+
+- **Prefer `notebookutils.notebook.runMultiple(DAG)`** for any "run these in parallel"
+  or "run X after Y/Z" request — it is the Fabric-native orchestration primitive.
+- **`dependencies`** (list of activity `name`s) expresses the DAG edges; the fan-in
+  "4th depends on the first three" pattern is just `dependencies: [a, b, c]`.
+- **`concurrency`** bounds how many activities run in parallel (omit it to use the
+  platform default); `timeoutInSeconds` bounds the
+  whole DAG, `timeoutPerCellInSeconds` bounds a single activity.
+- **Cross-workspace runs**: add `"workspace": "<workspace name or ID>"` to an activity.
+- **Always `validateDAG(DAG)`** before `runMultiple` to fail fast on duplicate names,
+  missing dependencies, or cycles.
+- For a **single** child run (no DAG), use `notebookutils.notebook.run("Notebook", 90, {...})`.
+
+---
+
 ## Error Reference
 
 | HTTP | Error | Root Cause | Fix |

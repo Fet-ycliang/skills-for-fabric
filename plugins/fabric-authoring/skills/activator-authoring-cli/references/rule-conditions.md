@@ -87,6 +87,40 @@ Container -> Source -> SourceEvent -> Rule
 
 Do **not** add Object, SplitEvent, IdentityPartAttribute, or BasicEventAttribute entities unless you are intentionally switching to attribute-based modeling.
 
+### Required FieldsDefaultsStep
+
+Every `EventTrigger` must begin with exactly one `EventSelector` row. The
+`EventReference` is nested inside that selector and points to the SourceEvent
+entity. Do not place an `EventReference` row directly in `FieldsDefaultsStep`;
+RSA rejects that shape with `InvalidTemplateInstance`.
+
+```json
+{
+  "name": "FieldsDefaultsStep",
+  "id": "<guid>",
+  "rows": [
+    {
+      "name": "EventSelector",
+      "kind": "Event",
+      "arguments": [
+        {
+          "name": "event",
+          "kind": "EventReference",
+          "type": "complex",
+          "arguments": [
+            {
+              "name": "entityId",
+              "type": "string",
+              "value": "<source-event-entity-guid>"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
 ### EventDetectStep Branches
 
 Use exactly ONE branch per step:
@@ -138,7 +172,7 @@ State conditions: `NumberValueCondition`, `NumberRangeCondition`, `TextValueCond
 
 Change conditions: `NumberBecomes`, `NumberEntersOrLeavesRange`, `NumberChanges`, `NumberTrendsBy`, `TextChanges`, `LogicalBecomes`, `AnyValueChange`.
 
-> ⚠️ **Common mistakes:** `EachTime` is an OccurrenceOption for AttributeTrigger's ScalarDetectStep — NOT valid in EventDetectStep. A bare `AnyValueChange` without `EventFieldSelector` before it causes `RowCountMismatch`. Another common mistake is overbuilding an Object/SplitEvent/Attribute graph for a rule that should just use `SourceEvent` + `EventTrigger`.
+> ⚠️ **Common mistakes:** A top-level `EventReference` row in `FieldsDefaultsStep` is invalid; wrap it in the required `EventSelector` row. `EachTime` is an OccurrenceOption for AttributeTrigger's ScalarDetectStep — NOT valid in EventDetectStep. A bare `AnyValueChange` without `EventFieldSelector` before it causes `RowCountMismatch`. Another common mistake is overbuilding an Object/SplitEvent/Attribute graph for a rule that should just use `SourceEvent` + `EventTrigger`.
 
 ---
 
