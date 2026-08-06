@@ -34,8 +34,6 @@ User-facing changes for the public Microsoft Fabric Skills release.
   per pipeline at a time (`WorkspaceMigrationOperationInProgress` HTTP 400), first-deploy warm-up
   (`Alm_InvalidRequest_WorkloadUnavailable`, ~60-120 s), the `x-ms-operation-id` response-header location,
   the 300-item-per-deploy cap, the write-only deploy `note`, and that deploys copy definitions, not data.
-- **Catalog-total startup-metadata check** -- `quality_checker.py` now measures the whole catalog's startup metadata (name + description, the only parts loaded at startup) against the runtime budget. The existing per-skill 1023-character cap cannot protect the catalog on its own. The check is a ratchet: it fails on regression past `STARTUP_CEILING` and warns otherwise.
-- **Retired-suffix check** -- `quality_checker.py` flags a new skill that uses a retired `-authoring-` / `-consumption-` / `-operations-` suffix and points at the one-skill-per-item pattern. Existing skills are grandfathered.
 - **`skills/fabriciq-ontology-cli`** -- unified Fabric IQ Ontology skill with explicit authoring and consumption modes.
 - **`skills/eventstream-cli`** -- one Eventstream skill with authoring and consumption modes for topology creation, lifecycle changes, inspection, health, retention, throughput and Custom Endpoint connection metadata.
 - **`skills/activator-cli`** -- one Activator / Reflex skill with authoring and consumption modes covering item and rule creation, sources, conditions and actions, plus read-only listing, inspection and `ReflexEntities.json` decoding.
