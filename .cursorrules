@@ -48,9 +48,7 @@ Developers use REST APIs to manage artifacts, then protocol-specific connections
 ### SQL Database (in Fabric, OLTP)
 - OLTP database with an enforced T-SQL surface (PK/FK/constraints), Query Store, and DMVs - distinct from the Warehouse
 - Connect over TDS with `sqlcmd` to the SQL database (read-write) endpoint, not the SQL analytics endpoint, for authoring and diagnostics
-- Authoring skill: `skills/sqldb-authoring-cli/SKILL.md`
-- Consumption skill: `skills/sqldb-consumption-cli/SKILL.md`
-- Operations skill: `skills/sqldb-operations-cli/SKILL.md`
+- Skill: `skills/sqldb-cli/SKILL.md` — one mode dispatcher; `authoring` for DDL/DML, constraints and indexes, `consumption` for read-only T-SQL, `operations` for Query Store / DMV diagnostics
 
 ### Notebooks
 - Tag first cell as "parameters" for parameterized notebooks
@@ -69,8 +67,7 @@ Developers use REST APIs to manage artifacts, then protocol-specific connections
 - Prefer materialized views for frequent aggregation queries
 - Use `.create-merge table` and `.create-or-alter function` for idempotent schema deployment
 - Primary CLI tool: `az rest` against the Kusto REST API (see eventhouse skills for patterns)
-- Authoring skill: `skills/eventhouse-authoring-cli/SKILL.md`
-- Consumption skill: `skills/eventhouse-consumption-cli/SKILL.md`
+- Unified skill: `skills/eventhouse-cli/SKILL.md` with authoring and consumption modes
 
 ### Spark Operations
 - Operations skill: `skills/spark-operations-cli/SKILL.md` — read-only triage for failed jobs, stuck sessions, performance bottlenecks
@@ -81,16 +78,14 @@ Developers use REST APIs to manage artifacts, then protocol-specific connections
 ### Dataflows Gen2 (Data Integration)
 - Use Fabric REST API for dataflow lifecycle management and Power Query M mashup authoring
 - Primary CLI tool: `az rest` against the Fabric REST API
-- Authoring skill: `skills/dataflows-authoring-cli/SKILL.md`
-- Consumption skill: `skills/dataflows-consumption-cli/SKILL.md`
+- Dataflows skill: `skills/dataflows-cli/SKILL.md` (authoring and consumption are modes)
 
 ### Eventstreams (Real-Time Intelligence)
 - Create and manage Eventstream topologies via Fabric REST API
 - Supports 25 source types, 8 operators (Filter, Aggregate, GroupBy, SQL, etc.), 4 destination types
 - Node names must be alphanumeric PascalCase, 3-63 characters
-- Primary CLI tool: `az rest` against the Fabric REST API (see eventstream skills for patterns)
-- Authoring skill: `skills/eventstream-authoring-cli/SKILL.md`
-- Consumption skill: `skills/eventstream-consumption-cli/SKILL.md`
+- Primary CLI tool: `az rest` against the Fabric REST API
+- Eventstream skill: `skills/eventstream-cli/SKILL.md` (authoring and consumption are modes)
 
 ### Event Schema Sets (Real-Time Intelligence)
 - Read-only catalogs of event types and message schemas, accessed via the Fabric Items REST API (`.../eventSchemaSets`)
@@ -100,13 +95,18 @@ Developers use REST APIs to manage artifacts, then protocol-specific connections
 
 ### Activator / Reflex (Real-Time Intelligence)
 - Use Fabric REST API to create Activator items and update Reflex definitions
-- Authoring skill: `skills/activator-authoring-cli/SKILL.md`
-- Consumption skill: `skills/activator-consumption-cli/SKILL.md`
+- Activator skill: `skills/activator-cli/SKILL.md` (authoring and consumption are modes)
 - Power BI sources require exact `pbiMetrics`, `powerBiSource-v1`, a JSON-string source query, and a matching `DatasetMetric`; never use `BasicFilter` in the metric definition
 - When another data workflow surfaces a timely operational signal, proactively ask whether the user wants an Activator alert for future occurrences
 
 ### Cost Estimation & Migration Planning
 - E2E skill: `skills/e2e-fabric-cost-estimation/SKILL.md` — Fabric capacity cost estimation, SKU sizing, billing strategy
+
+### Deployment Pipelines (ALM / CI-CD)
+- Use Fabric REST API to create deployment pipelines, assign workspaces to stages, and deploy stage content across dev/test/prod
+- Deploy is a long-running operation (202 → poll `/v1/operations/{id}`); deployment/parameter rules are UI-only
+- Authoring skill: `skills/deployment-pipelines-authoring-cli/SKILL.md`
+- Primary CLI tool: `az rest` via `/v1/deploymentPipelines`
 
 ### Power BI / FabricIQ
 - Consumption skill: `skills/fabriciq/SKILL.md` — multi-step Power BI analysis (discover, inspect, resolve, generate, execute)
@@ -114,8 +114,7 @@ Developers use REST APIs to manage artifacts, then protocol-specific connections
 
 ### Fabric IQ / Ontology (preview)
 - Use the Fabric item-definition REST API (Create / Get / Update Item Definition) with `InlineBase64` parts
-- Authoring skill: `skills/fabriciq-ontology-authoring-cli/SKILL.md`
-- Consumption skill: `skills/fabriciq-ontology-consumption-cli/SKILL.md`
+- Skill: `skills/fabriciq-ontology-cli/SKILL.md` — select authoring or consumption mode for Ontology definition changes, grounding, lineage, and graph walks
 
 ### Catalog Search (Item Discovery)
 - Use `POST /v1/catalog/search` to find items across workspaces by name, description, or workspace name
@@ -147,6 +146,9 @@ Developers use REST APIs to manage artifacts, then protocol-specific connections
 - Validate few-shot examples before adding to agents
 - Test sandbox stage before production
 - Track evaluation accuracy over time
+
+### Git Integration (ALM / CI-CD)
+- Operations skill: `skills/git-integration-operations-cli/SKILL.md` — drive the Git lifecycle from CLI (connect, commit, update/pull, status, resolve conflicts, disconnect, SP sync) via `fab api` / `az rest`
 
 ## File Patterns
 

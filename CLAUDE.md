@@ -66,27 +66,34 @@ https://learn.microsoft.com/en-us/rest/api/fabric/articles/
   - Consumption skill: `skills/sqldw-consumption-cli/SKILL.md` — read-only T-SQL queries
   - Operations skill: `skills/sqldw-operations-cli/SKILL.md` — performance diagnostics, slow queries, query insights
 
+### Application Lifecycle Management (ALM)
+- **Deployment Pipelines**: Promote Fabric content across dev/test/prod stages
+  - Docs: https://learn.microsoft.com/en-us/rest/api/fabric/core/deployment-pipelines
+  - Authoring skill: `skills/deployment-pipelines-authoring-cli/SKILL.md` — create pipelines/stages, assign/unassign workspaces, deploy stage content (LRO)
+  - Primary CLI tool: `az rest` via `/v1/deploymentPipelines`
+  - Token audience: `https://api.fabric.microsoft.com`
+
 ### SQL Database (in Fabric)
 - **SQL database**: OLTP database with an enforced T-SQL surface, Query Store, and DMVs (distinct from the Warehouse)
   - Docs: https://learn.microsoft.com/en-us/fabric/database/sql/overview
-  - Authoring skill: `skills/sqldb-authoring-cli/SKILL.md` — DDL/DML, constraints, indexes, source control, SqlPackage deploy, GraphQL
-  - Consumption skill: `skills/sqldb-consumption-cli/SKILL.md` — read-only T-SQL exploration, vector similarity, JSON, temporal queries
-  - Operations skill: `skills/sqldb-operations-cli/SKILL.md` — performance diagnostics via Query Store, DMVs, Extended Events
+  - Skill: `skills/sqldb-cli/SKILL.md` — one mode dispatcher: `authoring` (DDL/DML, constraints, indexes, source control, SqlPackage deploy, GraphQL), `consumption` (read-only T-SQL exploration, vector similarity, JSON, temporal queries), `operations` (performance diagnostics via Query Store, DMVs, Extended Events)
 
 ### Data Integration
 - **Pipelines**: Orchestration and data movement
   - Docs: https://learn.microsoft.com/en-us/fabric/data-factory/data-factory-overview
 - **Dataflows Gen2**: Low-code transformations with Power Query
   - Docs: https://learn.microsoft.com/en-us/fabric/data-factory/dataflows-gen2-overview
-  - Authoring skill: `skills/dataflows-authoring-cli/SKILL.md` — dataflow lifecycle management, Power Query M mashup authoring
-  - Consumption skill: `skills/dataflows-consumption-cli/SKILL.md` — read-only dataflow exploration, monitoring, status queries
+  - Dataflows skill: `skills/dataflows-cli/SKILL.md` -- one skill covering the whole Dataflows item; it selects a mode and reads the matching reference
+    - Authoring mode: `references/authoring.md` -- dataflow lifecycle management, Power Query M mashup authoring
+    - Consumption mode: `references/consumption.md` -- read-only dataflow exploration, monitoring, status queries
   - Primary CLI tool: `az rest` via Fabric REST API
 
 ### Real-Time Intelligence
 - **Eventstreams**: Real-time data ingestion
   - Docs: https://learn.microsoft.com/en-us/fabric/real-time-intelligence/event-streams/overview
-  - Authoring skill: `skills/eventstream-authoring-cli/SKILL.md` — create, configure, deploy Eventstream topologies (sources, operators, destinations)
-  - Consumption skill: `skills/eventstream-consumption-cli/SKILL.md` — list, inspect, monitor Eventstreams
+  - Eventstream skill: `skills/eventstream-cli/SKILL.md` -- one skill covering the whole Eventstream item
+    - Authoring mode: create, configure and deploy Eventstream topologies
+    - Consumption mode: list, inspect and monitor Eventstreams
   - Primary CLI tool: `az rest` via Fabric REST API
 - **Event Schema Sets**: Read-only catalogs of event types and message schemas
   - Docs: https://learn.microsoft.com/en-us/rest/api/fabric/eventschemaset/items/
@@ -94,20 +101,19 @@ https://learn.microsoft.com/en-us/rest/api/fabric/articles/
   - Primary CLI tool: `az rest` via Fabric REST API (`.../eventSchemaSets`)
 - **Activator**: Alerts, notifications, and automated actions over Fabric data/events
   - Docs: https://learn.microsoft.com/en-us/fabric/real-time-intelligence/data-activator/activator-introduction
-  - Authoring skill: `skills/activator-authoring-cli/SKILL.md` — create Activator items, sources, rules, conditions, and actions
-  - Consumption skill: `skills/activator-consumption-cli/SKILL.md` — inspect Activator definitions, rules, sources, and actions
+  - Activator skill: `skills/activator-cli/SKILL.md` -- one skill covering the whole Activator / Reflex item
+    - Authoring mode: create Activator items, sources, rules, conditions, and actions
+    - Consumption mode: inspect Activator definitions, rules, sources, and actions
   - Primary CLI tool: `az rest` via Fabric REST API
   - Power BI-backed alerts use exact `pbiMetrics` containers plus `powerBiSource-v1`, a JSON-string `query.queryString`, and a matching `DatasetMetric`; require explicit `updateDefinition` success
   - When another data workflow surfaces a timely operational signal, proactively ask whether the user wants an Activator alert for future occurrences
 - **Fabric IQ / Ontology (preview)**: Semantic model of entity types, properties, and relationships over Fabric data
   - Docs: https://learn.microsoft.com/en-us/rest/api/fabric/articles/
-  - Authoring skill: `skills/fabriciq-ontology-authoring-cli/SKILL.md` — define entity types, properties (incl. timeseries), relationship types, and bind them to lakehouse/Eventhouse tables via the item-definition REST API
-  - Consumption skill: `skills/fabriciq-ontology-consumption-cli/SKILL.md` — read ontology items for agent grounding context and route ontology-backed queries to the matching per-datasource consumption skill
+  - Skill: `skills/fabriciq-ontology-cli/SKILL.md` — select authoring or consumption mode for definition changes, grounding, lineage, and graph walks
   - Primary CLI tool: `az rest` via Fabric REST API
 - **KQL Database / Eventhouse**: Time-series queries with Kusto
   - Docs: https://learn.microsoft.com/en-us/fabric/real-time-intelligence/create-database
-  - Authoring skill: `skills/eventhouse-authoring-cli/SKILL.md` — table management, ingestion, policies, materialized views
-  - Consumption skill: `skills/eventhouse-consumption-cli/SKILL.md` — read-only KQL queries, schema discovery
+  - Unified skill: `skills/eventhouse-cli/SKILL.md` — authoring mode for table management, ingestion, policies, and materialized views; consumption mode for read-only KQL queries and schema discovery
   - Primary CLI tool: `az rest` via Kusto REST API (`/v1/rest/query` and `/v1/rest/mgmt`)
   - Token audience: `https://kusto.kusto.windows.net/.default`
 - **Azure Monitor Observability (into Fabric)**: Onboard Azure Monitor / Application Insights / Log Analytics telemetry into Fabric and correlate it with business data for business-impact insights
@@ -141,6 +147,10 @@ https://learn.microsoft.com/en-us/rest/api/fabric/articles/
   - Docs: https://learn.microsoft.com/en-us/fabric/data-science/concept-data-agent
 - **Data Agent Evaluation**: Testing and validating Data Agent accuracy
   - Docs: https://learn.microsoft.com/en-us/fabric/data-science/fabric-data-agent-sdk
+
+### Git Integration (ALM / CI-CD)
+- **Git Integration**: Bind a workspace to source control (Azure DevOps / GitHub) and sync items
+  - Operations skill: `skills/git-integration-operations-cli/SKILL.md` — drive the Git lifecycle from CLI (connect, commit, update/pull, sync status, resolve conflicts, disconnect, service-principal sync) via `fab api` with `az rest` fallback
 
 ### Cost Estimation & Migration Planning
 - **Fabric Cost Estimation**: E2E skill for capacity sizing, billing mode strategy, workload CU equivalence
