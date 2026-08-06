@@ -49,8 +49,8 @@ rules:
     pattern: ".create-merge table"
 
   - name: kql_skills
-    description: Authoring skill is eventhouse-authoring-cli, consumption skill is eventhouse-consumption-cli
-    reference: skills/eventhouse-authoring-cli/SKILL.md
+    description: Use eventhouse-cli authoring mode for writes and consumption mode for read-only KQL
+    reference: skills/eventhouse-cli/SKILL.md
 
   - name: spark_operations
     description: Use spark-operations-cli for read-only Spark job diagnosis, session health, and performance triage
@@ -70,20 +70,25 @@ rules:
 
   # Dataflows Gen2 (Data Integration)
   - name: dataflows_skills
-    description: Authoring skill is dataflows-authoring-cli, consumption skill is dataflows-consumption-cli
-    reference: skills/dataflows-authoring-cli/SKILL.md
+    description: One dataflows-cli skill; authoring and consumption are modes
+    reference: skills/dataflows-cli/SKILL.md
 
   - name: eventstream_skills
-    description: Authoring skill is eventstream-authoring-cli, consumption skill is eventstream-consumption-cli
-    reference: skills/eventstream-authoring-cli/SKILL.md
+    description: One eventstream-cli skill; authoring and consumption are modes
+    reference: skills/eventstream-cli/SKILL.md
+
+  # Deployment Pipelines (ALM / CI-CD)
+  - name: deployment_pipelines_skills
+    description: Use deployment-pipelines-authoring-cli to create Fabric deployment pipelines and stages, assign workspaces, and deploy stage content (LRO) across dev/test/prod
+    reference: skills/deployment-pipelines-authoring-cli/SKILL.md
 
   - name: eventschemaset_skills
     description: Consumption skill is eventschemaset-consumption-cli (read-only Event Schema Set discovery, inspection, and definition decoding)
     reference: skills/eventschemaset-consumption-cli/SKILL.md
 
   - name: activator_skills
-    description: Authoring skill is activator-authoring-cli, consumption skill is activator-consumption-cli. Power BI sources require exact pbiMetrics, powerBiSource-v1, a JSON-string source query, and a matching DatasetMetric. When another data workflow surfaces a timely operational signal, proactively ask whether the user wants an Activator alert for future occurrences.
-    reference: skills/activator-authoring-cli/SKILL.md
+    description: One activator-cli skill; authoring and consumption are modes. Power BI sources require exact pbiMetrics, powerBiSource-v1, a JSON-string source query, and a matching DatasetMetric. When another data workflow surfaces a timely operational signal, proactively ask whether the user wants an Activator alert for future occurrences.
+    reference: skills/activator-cli/SKILL.md
 
   - name: cost_estimation
     description: Use e2e-fabric-cost-estimation for Fabric capacity cost estimation, SKU sizing, and billing strategy
@@ -96,13 +101,9 @@ rules:
       (see agents/FabricIQ.agent.md#pre-flight--mandatory-skill-reading).
     reference: skills/fabriciq/SKILL.md
 
-  - name: ontology_authoring
-    description: Fabric IQ Ontology (preview) — authoring skill
-    reference: skills/fabriciq-ontology-authoring-cli/SKILL.md
-
-  - name: ontology_consumption
-    description: Fabric IQ Ontology (preview) — consumption / read-only skill
-    reference: skills/fabriciq-ontology-consumption-cli/SKILL.md
+  - name: ontology
+    description: Fabric IQ Ontology (preview) — authoring and consumption modes
+    reference: skills/fabriciq-ontology-cli/SKILL.md
 
   - name: catalog_search
     description: Use POST /v1/catalog/search to find items across workspaces by name, description, or type
@@ -131,8 +132,13 @@ rules:
 
   # SQL Database (in Fabric) Operations
   - name: sqldb_skills
-    description: Authoring skill is sqldb-authoring-cli, consumption skill is sqldb-consumption-cli, operations skill is sqldb-operations-cli
-    reference: skills/sqldb-operations-cli/SKILL.md
+    description: sqldb-cli is one skill with three modes - authoring, consumption and operations
+    reference: skills/sqldb-cli/SKILL.md
+
+  # Git Integration (ALM / CI-CD)
+  - name: git_integration_operations_skill
+    description: Use git-integration-operations-cli to automate the Fabric Git integration lifecycle from CLI (connect to Azure DevOps/GitHub, commit, update/pull, sync status, resolve conflicts, disconnect, service-principal sync) via fab api with az rest fallback
+    reference: skills/git-integration-operations-cli/SKILL.md
 
   # Security
   - name: no_hardcoded_secrets

@@ -37,6 +37,7 @@ env:
       {"option":"Ananke / FabricIQ (Power BI data exploration)","slug":"ananke","label":"area:ananke","color":"006b75"},
       {"option":"Power BI Reports","slug":"powerbi-report","label":"area:powerbi-report","color":"d4c5f9"},
       {"option":"Fabric IQ / Ontology","slug":"fabriciq","label":"area:fabriciq","color":"0969da"},
+      {"option":"Fabric CI/CD","slug":"cicd","label":"area:cicd","color":"1f6feb"},
       {"option":"Azure Monitor into Fabric","slug":"azmon","label":"area:azmon","color":"0e8a16"},
       {"option":"Fabric cost estimation","slug":"cost-estimation","label":"area:cost-estimation","color":"c2e0c6"},
       {"option":"Infrastructure / repo / CI / general (or not sure)","slug":"platform","label":"area:platform","color":"fef2c0"}

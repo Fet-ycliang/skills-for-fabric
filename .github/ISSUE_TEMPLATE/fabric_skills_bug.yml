@@ -35,6 +35,7 @@ body:
         - Ananke / FabricIQ (Power BI data exploration)
         - Power BI Reports
         - Fabric IQ / Ontology
+        - Fabric CI/CD
         - Azure Monitor into Fabric
         - Fabric cost estimation
         - Infrastructure / repo / CI / general (or not sure)

@@ -2,7 +2,74 @@
 
 User-facing changes for the public Microsoft Fabric Skills release.
 
-## [Unreleased]
+## [0.3.11] - 2026-08-06
+
+
+### Added
+- **`skills/git-integration-operations-cli`** -- new Microsoft Fabric skill for driving the Git integration lifecycle of a workspace via CLI: connect/disconnect against Azure DevOps and GitHub, initialize the connection, commit workspace items to Git, update (pull) a workspace from Git, check sync status, and resolve conflicts.
+- **`skills/deployment-pipelines-authoring-cli`** -- new authoring skill for Microsoft Fabric
+  deployment pipelines (ALM / CI-CD). Guides the Fabric core REST API surface
+  (`/v1/deploymentPipelines`) to create pipelines and stages, assign/unassign workspaces to stages,
+  and deploy stage content across dev/test/prod as a long-running operation (all items or selective
+  item deploys). Covers per-operation **delegated scopes** (`Pipeline.Read.All` / `Pipeline.ReadWrite.All`
+  / `Workspace.ReadWrite.All`, and `Pipeline.Deploy` for deploy), required **permissions** (pipeline Admin
+  + workspace roles), **item pairing / autobinding** repair (unassign->reassign with a deployment-rule-loss
+  warning), and a maintainable **supported item types** reference reconciled from the official Microsoft
+  Fabric documentation.
+- **`skills/deployment-pipelines-authoring-cli/references/scripts/diff_item_definitions.py`** -- a local,
+  stdlib-only tool that compares two stages' `getDefinition` payloads and emits **only** the differences.
+  It decodes each base64 part, **normalizes** the fields Fabric auto-rebinds on deploy (pipeline
+  `notebookId`/`workspaceId`, report->model id, Direct Lake server/db, connections) to avoid false-positive
+  "changed" items, matches parts by path, and produces a structural JSON diff for JSON parts and a unified
+  diff for text parts (TMDL/`.py`/`.pq`). Exit code mirrors POSIX `diff` (`0`=identical, `1`=changed,
+  `2`=error) so it doubles as the change detector for selective deploys; includes a built-in `--selftest`.
+  This lets the *Deploy only changed items* workflow forward **only the emitted diff** (a few lines) to the
+  model instead of two full definitions (>100 KB).
+- **Change-detection & deploy guidance** -- the skill documents that `List stage items` returns item
+  identity + pairing (`itemId`, `itemDisplayName`, `itemType`, `sourceItemId`, `targetItemId`,
+  `lastDeploymentTime`) with no change status, and that `lastDeploymentTime` is the last *deployment* time
+  (not the last edit), so change detection must diff `getDefinition` payloads per stage; notes the
+  `getDefinition` contract differs by type (Notebook/SemanticModel/Report are LRO, DataPipeline is
+  synchronous; Warehouse has no definition API); and captures deploy operational caveats -- one operation
+  per pipeline at a time (`WorkspaceMigrationOperationInProgress` HTTP 400), first-deploy warm-up
+  (`Alm_InvalidRequest_WorkloadUnavailable`, ~60-120 s), the `x-ms-operation-id` response-header location,
+  the 300-item-per-deploy cap, the write-only deploy `note`, and that deploys copy definitions, not data.
+- **Tests & registration** -- a Vally smoke eval (`tests/evals/deployment-pipelines-authoring-cli/eval.yaml`),
+  a report-only Vally full-eval spec (`tests/evals/deployment-pipelines-authoring-cli-fulleval/eval.yaml`)
+  with a live-Fabric Layer-2 grader that verifies the created pipeline's ordered stage sequence, and routing
+  tests. Registered in the `fabric-authoring` and `fabric-skills` plugins under a new `cicd` ownership team.
+- **Catalog-total startup-metadata check** -- `quality_checker.py` now measures the whole catalog's startup metadata (name + description, the only parts loaded at startup) against the runtime budget. The existing per-skill 1023-character cap cannot protect the catalog on its own. The check is a ratchet: it fails on regression past `STARTUP_CEILING` and warns otherwise.
+- **Retired-suffix check** -- `quality_checker.py` flags a new skill that uses a retired `-authoring-` / `-consumption-` / `-operations-` suffix and points at the one-skill-per-item pattern. Existing skills are grandfathered.
+- **`skills/fabriciq-ontology-cli`** -- unified Fabric IQ Ontology skill with explicit authoring and consumption modes.
+- **`skills/eventstream-cli`** -- one Eventstream skill with authoring and consumption modes for topology creation, lifecycle changes, inspection, health, retention, throughput and Custom Endpoint connection metadata.
+- **`skills/activator-cli`** -- one Activator / Reflex skill with authoring and consumption modes covering item and rule creation, sources, conditions and actions, plus read-only listing, inspection and `ReflexEntities.json` decoding.
+- Added `sqldb-cli`, a three-mode dispatcher for Fabric SQL database authoring, consumption, and OLTP performance diagnostics.
+- Added `sqldb-cli-fulleval`, migrating the legacy SQL Database markdown full-eval plans (individual authoring, consumption and operations, plus the combined authoring+consumption consistency plan) to Vally.
+
+### Changed
+- **`skills/mlv-operations-cli`** -- documents the Fabric MLV job-type mismatch where history/status can show `MaterializedLakeViews`, but on-demand refresh must use the lakehouse-scoped `refreshMaterializedLakeViews/instances` endpoint. The skill now also absorbs the 2026-07-01 public API additions for MLV execution definitions and selected-lineage refresh via `executionData.mlvExecutionDefinitionId`, and directs interactive recurring refresh to Lakehouse schedules instead of notebook or pipeline orchestration.
+- **Skill naming convention** -- skills are now named `{item}-cli`, one per Fabric item or capability, and cover authoring, consumption and operations as internal **modes**, selected by a dispatcher in `SKILL.md` with per-mode detail under `references/{mode}.md`. New `-authoring-` / `-consumption-` / `-operations-` skills are no longer created; add the capability as a mode of the item skill instead. Existing skills keep their names until their item migrates.
+- **`skills/dataflows-cli`** -- `dataflows-authoring-cli`, `dataflows-consumption-cli` and `dataflows-save-as-authoring-cli` are now the authoring, consumption and upgrade modes of a single `dataflows-cli` skill. Behaviour is unchanged; the guidance moved into `references/{mode}.md` and the dispatcher carries a terminal-write table so each mode's state-changing call stays in the always-loaded body.
+- **`tests/evals/eventstream-cli`** and **`tests/evals/eventstream-cli-fulleval`** -- folded the former per-mode smoke coverage and combined full-eval coverage into the unified Eventstream skill directories without changing stimulus or grader requirements.
+- **`skills/eventhouse-cli`** -- unified Eventhouse authoring and read-only KQL consumption behind one mode-dispatching skill, with consolidated smoke and full-eval coverage.
+- **`tests/evals/activator-cli`**, **`tests/evals/activator-cli-fulleval`** and **`tests/evals/activator-cli-boundaries-fulleval`** -- folded the former per-mode smoke coverage and renamed the two Vally full-eval shards onto the unified Activator skill directories without changing stimulus or grader requirements.
+- Folded the smoke evals and graders for `sqldb-authoring-cli`, `sqldb-consumption-cli`, and `sqldb-operations-cli` into `sqldb-cli`.
+- Retargeted the SQL database portal eval, the Vally suites, plugin bundles, ownership, and the cross-tool compatibility files at the unified `sqldb-cli` skill.
+
+### Removed
+- **`skills/dataflows-authoring-cli`**, **`skills/dataflows-consumption-cli`**, **`skills/dataflows-save-as-authoring-cli`** -- superseded by the `dataflows-cli` item skill. Install `dataflows-cli` instead; it covers all three surfaces.
+- **`skills/fabriciq-ontology-authoring-cli`** and **`skills/fabriciq-ontology-consumption-cli`** -- folded into `fabriciq-ontology-cli` without changing their operational guidance or eval coverage.
+- **`skills/eventstream-authoring-cli`** and **`skills/eventstream-consumption-cli`** -- replaced by the matching modes in `skills/eventstream-cli`.
+- **`skills/eventhouse-authoring-cli`** and **`skills/eventhouse-consumption-cli`** -- replaced by `skills/eventhouse-cli`.
+- **`skills/activator-authoring-cli`** and **`skills/activator-consumption-cli`** -- replaced by the matching modes in `skills/activator-cli`.
+- Removed the superseded `sqldb-authoring-cli`, `sqldb-consumption-cli`, and `sqldb-operations-cli` top-level skills.
+- Retired the four legacy SQL Database markdown full-eval plans now covered by the Vally spec.
+
+### Fixed
+- **`.mcp.json`, `plugins/fabric-skills`, `plugins/fabric-consumption`** -- explicitly allow-list every FabricIQ MCP tool via `"tools": ["*"]`, so hosts that gate MCP tools on an explicit allow-list expose the full FabricIQ tool set (artifact discovery, schema inspection, value search, query execution) to the agent.
+- **`eventstream-cli` lifecycle control** -- documented bodyless pause requests, the required resume `startType` body, and the correct source/destination pause and resume endpoint order.
+- **`build/build_plugins.py`, `plugins/*`** -- fix Claude Cowork "Marketplace sync failed" by materializing a `.claude-plugin/plugin.json` in each plugin bundle. The plugin trees only carried the Copilot manifest at `.github/plugin/plugin.json`, so Claude/Cowork strict-mode discovery could not find the plugin manifest it expects. The Claude manifest is generated from the same per-plugin source manifest (no drift) and shipped to the public repo during sync.
+- **`build/build_plugins.py`, `.claude-plugin/marketplace.json`, `plugins/*/.claude-plugin/plugin.json`** -- fix `/plugin install <bundle>@fabric-collection` failing in Claude Code with `This plugin uses a source type your Claude Code version does not support`. Claude Code parses each `mcpServers` entry against a closed stdio/sse/http/ws schema that treats `tools` as reserved, so the per-server allow-list added for Copilot CLI made every bundle carrying MCP servers unparseable; the misleading "source type" wording pointed nowhere near the real field. Both Claude-facing manifests are now generated through `claude_safe_mcp_servers()`, which drops only that key, and the build fails non-zero if any Claude-facing manifest carries it. Copilot CLI keeps its allow-list unchanged. Resolves microsoft/skills-for-fabric#69.
 
 ## [0.3.10] - 2026-07-30
 

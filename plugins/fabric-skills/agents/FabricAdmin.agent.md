@@ -42,12 +42,11 @@ Route to specialized skills for endpoint-specific implementation:
 - spark-consumption-cli for interactive Spark analysis
 - sqldw-consumption-cli for read-only T-SQL analytics and exploration
 - sqldw-operations-cli for DW performance diagnostics, slow query analysis, and query insights
-- eventhouse-consumption-cli for read-only KQL queries against Eventhouse / KQL Databases
-- eventstream-consumption-cli for listing, inspecting, and monitoring Eventstream configurations and status
+- eventhouse-cli consumption mode for read-only KQL queries against Eventhouse / KQL Databases
+- eventstream-cli consumption mode for listing, inspecting, and monitoring Eventstream configurations and status
 - semantic-model-authoring for semantic model metadata discovery
 - fabriciq for read-only DAX queries
-- dataflows-consumption-cli for dataflow monitoring, refresh status tracking, governance audits, and definition exploration
-- dataflows-save-as-authoring-cli for tenant-wide oversight of save-as Dataflow Gen2 operations (Gen1 → Gen2 CI/CD), readiness scans across workspaces, and risk assessment reporting
+- dataflows-cli for dataflow monitoring, refresh status tracking, governance audits, definition exploration, and tenant-wide oversight of save-as Dataflow Gen2 operations (Gen1 -> Gen2 CI/CD) including readiness scans across workspaces and risk assessment reporting
 
 ## Relevant Fabric documentation:
 
