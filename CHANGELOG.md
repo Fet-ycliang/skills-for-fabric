@@ -34,57 +34,38 @@ User-facing changes for the public Microsoft Fabric Skills release.
   per pipeline at a time (`WorkspaceMigrationOperationInProgress` HTTP 400), first-deploy warm-up
   (`Alm_InvalidRequest_WorkloadUnavailable`, ~60-120 s), the `x-ms-operation-id` response-header location,
   the 300-item-per-deploy cap, the write-only deploy `note`, and that deploys copy definitions, not data.
-- **Tests & registration** -- a Vally smoke eval (`tests/evals/deployment-pipelines-authoring-cli/eval.yaml`),
-  a report-only Vally full-eval spec (`tests/evals/deployment-pipelines-authoring-cli-fulleval/eval.yaml`)
-  with a live-Fabric Layer-2 grader that verifies the created pipeline's ordered stage sequence, and routing
-  tests. Registered in the `fabric-authoring` and `fabric-skills` plugins under a new `cicd` ownership team.
 - **Catalog-total startup-metadata check** -- `quality_checker.py` now measures the whole catalog's startup metadata (name + description, the only parts loaded at startup) against the runtime budget. The existing per-skill 1023-character cap cannot protect the catalog on its own. The check is a ratchet: it fails on regression past `STARTUP_CEILING` and warns otherwise.
 - **Retired-suffix check** -- `quality_checker.py` flags a new skill that uses a retired `-authoring-` / `-consumption-` / `-operations-` suffix and points at the one-skill-per-item pattern. Existing skills are grandfathered.
 - **`skills/fabriciq-ontology-cli`** -- unified Fabric IQ Ontology skill with explicit authoring and consumption modes.
 - **`skills/eventstream-cli`** -- one Eventstream skill with authoring and consumption modes for topology creation, lifecycle changes, inspection, health, retention, throughput and Custom Endpoint connection metadata.
 - **`skills/activator-cli`** -- one Activator / Reflex skill with authoring and consumption modes covering item and rule creation, sources, conditions and actions, plus read-only listing, inspection and `ReflexEntities.json` decoding.
 - Added `sqldb-cli`, a three-mode dispatcher for Fabric SQL database authoring, consumption, and OLTP performance diagnostics.
-- Added `sqldb-cli-fulleval`, migrating the legacy SQL Database markdown full-eval plans (individual authoring, consumption and operations, plus the combined authoring+consumption consistency plan) to Vally.
 
 ### Changed
 - **`skills/mlv-operations-cli`** -- documents the Fabric MLV job-type mismatch where history/status can show `MaterializedLakeViews`, but on-demand refresh must use the lakehouse-scoped `refreshMaterializedLakeViews/instances` endpoint. The skill now also absorbs the 2026-07-01 public API additions for MLV execution definitions and selected-lineage refresh via `executionData.mlvExecutionDefinitionId`, and directs interactive recurring refresh to Lakehouse schedules instead of notebook or pipeline orchestration.
 - **Skill naming convention** -- skills are now named `{item}-cli`, one per Fabric item or capability, and cover authoring, consumption and operations as internal **modes**, selected by a dispatcher in `SKILL.md` with per-mode detail under `references/{mode}.md`. New `-authoring-` / `-consumption-` / `-operations-` skills are no longer created; add the capability as a mode of the item skill instead. Existing skills keep their names until their item migrates.
 - **`skills/dataflows-cli`** -- `dataflows-authoring-cli`, `dataflows-consumption-cli` and `dataflows-save-as-authoring-cli` are now the authoring, consumption and upgrade modes of a single `dataflows-cli` skill. Behaviour is unchanged; the guidance moved into `references/{mode}.md` and the dispatcher carries a terminal-write table so each mode's state-changing call stays in the always-loaded body.
-- **`tests/evals/eventstream-cli`** and **`tests/evals/eventstream-cli-fulleval`** -- folded the former per-mode smoke coverage and combined full-eval coverage into the unified Eventstream skill directories without changing stimulus or grader requirements.
-- **`skills/eventhouse-cli`** -- unified Eventhouse authoring and read-only KQL consumption behind one mode-dispatching skill, with consolidated smoke and full-eval coverage.
-- **`tests/evals/activator-cli`**, **`tests/evals/activator-cli-fulleval`** and **`tests/evals/activator-cli-boundaries-fulleval`** -- folded the former per-mode smoke coverage and renamed the two Vally full-eval shards onto the unified Activator skill directories without changing stimulus or grader requirements.
-- Folded the smoke evals and graders for `sqldb-authoring-cli`, `sqldb-consumption-cli`, and `sqldb-operations-cli` into `sqldb-cli`.
-- Retargeted the SQL database portal eval, the Vally suites, plugin bundles, ownership, and the cross-tool compatibility files at the unified `sqldb-cli` skill.
+- **`skills/eventhouse-cli`** -- unified Eventhouse authoring and read-only KQL consumption behind one mode-dispatching skill.
 
 ### Removed
 - **`skills/dataflows-authoring-cli`**, **`skills/dataflows-consumption-cli`**, **`skills/dataflows-save-as-authoring-cli`** -- superseded by the `dataflows-cli` item skill. Install `dataflows-cli` instead; it covers all three surfaces.
-- **`skills/fabriciq-ontology-authoring-cli`** and **`skills/fabriciq-ontology-consumption-cli`** -- folded into `fabriciq-ontology-cli` without changing their operational guidance or eval coverage.
+- **`skills/fabriciq-ontology-authoring-cli`** and **`skills/fabriciq-ontology-consumption-cli`** -- folded into `fabriciq-ontology-cli` without changing their operational guidance.
 - **`skills/eventstream-authoring-cli`** and **`skills/eventstream-consumption-cli`** -- replaced by the matching modes in `skills/eventstream-cli`.
 - **`skills/eventhouse-authoring-cli`** and **`skills/eventhouse-consumption-cli`** -- replaced by `skills/eventhouse-cli`.
 - **`skills/activator-authoring-cli`** and **`skills/activator-consumption-cli`** -- replaced by the matching modes in `skills/activator-cli`.
 - Removed the superseded `sqldb-authoring-cli`, `sqldb-consumption-cli`, and `sqldb-operations-cli` top-level skills.
-- Retired the four legacy SQL Database markdown full-eval plans now covered by the Vally spec.
 
 ### Fixed
 - **`.mcp.json`, `plugins/fabric-skills`, `plugins/fabric-consumption`** -- explicitly allow-list every FabricIQ MCP tool via `"tools": ["*"]`, so hosts that gate MCP tools on an explicit allow-list expose the full FabricIQ tool set (artifact discovery, schema inspection, value search, query execution) to the agent.
 - **`eventstream-cli` lifecycle control** -- documented bodyless pause requests, the required resume `startType` body, and the correct source/destination pause and resume endpoint order.
-- **`build/build_plugins.py`, `plugins/*`** -- fix Claude Cowork "Marketplace sync failed" by materializing a `.claude-plugin/plugin.json` in each plugin bundle. The plugin trees only carried the Copilot manifest at `.github/plugin/plugin.json`, so Claude/Cowork strict-mode discovery could not find the plugin manifest it expects. The Claude manifest is generated from the same per-plugin source manifest (no drift) and shipped to the public repo during sync.
-- **`build/build_plugins.py`, `.claude-plugin/marketplace.json`, `plugins/*/.claude-plugin/plugin.json`** -- fix `/plugin install <bundle>@fabric-collection` failing in Claude Code with `This plugin uses a source type your Claude Code version does not support`. Claude Code parses each `mcpServers` entry against a closed stdio/sse/http/ws schema that treats `tools` as reserved, so the per-server allow-list added for Copilot CLI made every bundle carrying MCP servers unparseable; the misleading "source type" wording pointed nowhere near the real field. Both Claude-facing manifests are now generated through `claude_safe_mcp_servers()`, which drops only that key, and the build fails non-zero if any Claude-facing manifest carries it. Copilot CLI keeps its allow-list unchanged. Resolves microsoft/skills-for-fabric#69.
+- **`plugins/*`** -- fix Claude Cowork "Marketplace sync failed" by materializing a `.claude-plugin/plugin.json` in each plugin bundle. The plugin trees only carried the Copilot manifest at `.github/plugin/plugin.json`, so Claude/Cowork strict-mode discovery could not find the plugin manifest it expects. The Claude manifest is generated from the same per-plugin source manifest (no drift) and shipped to the public repo during sync.
+- **`.claude-plugin/marketplace.json`, `plugins/*/.claude-plugin/plugin.json`** -- fix `/plugin install <bundle>@fabric-collection` failing in Claude Code with `This plugin uses a source type your Claude Code version does not support`. Claude Code parses each `mcpServers` entry against a closed stdio/sse/http/ws schema that treats `tools` as reserved, so the per-server allow-list added for Copilot CLI made every bundle carrying MCP servers unparseable; the misleading "source type" wording pointed nowhere near the real field. Both Claude-facing manifests are now generated through `claude_safe_mcp_servers()`, which drops only that key, and the build fails non-zero if any Claude-facing manifest carries it. Copilot CLI keeps its allow-list unchanged. Resolves microsoft/skills-for-fabric#69.
 
 ## [0.3.10] - 2026-07-30
 
 ### Added
 - **`skills/e2e-fabric-cost-estimation`** -- new skill for estimating Microsoft Fabric workload costs before migration. Covers CU capacity sizing, billing-mode strategy (Reserved vs. PAYG vs. Autoscale Billing for Spark), storage/network pricing, SKU right-sizing, and multi-cloud source cost equivalence (Databricks/Synapse/HDInsight and other platforms). The skill instructs the agent to fetch prices live where public APIs exist (Azure Retail Prices API, AWS Price List, GCP Cloud Billing Catalog) and from official pricing pages or the customer's billing/usage data where they don't (Databricks, Snowflake, Teradata), rather than hardcoding them, and to surface the source and date with every quoted figure.
 
-**Baseline delta (without-skill vs with-skill):** Without the skill, cost-estimation prompts route to migration/authoring skills or produce hardcoded/guessed prices and inconsistent SKU sizing. With the skill, those prompts route to `e2e-fabric-cost-estimation` and produce a live-priced, source-cited estimate grounded in the documented SKU→CU map — verified by the routing tests (`tests/test_routing.py`) and the L1/L2 eval graders (`tests/evals/e2e-fabric-cost-estimation/eval.yaml`).
-- **`tests/evals/sqldw-consumption-cli/eval.yaml`, `tests/evals/sqldw-operations-cli/eval.yaml`** -- a
-  deterministic `tool-calls` grader (`tool-calls-mcp-execute-not-sqlcmd`) asserting the agent calls
-  `execute_query` and never shells out to `sqlcmd` (`az rest` control-plane discovery stays allowed).
-- **`tests/evals/sqldw-authoring-cli/eval.yaml`** -- a new Vally eval for `sqldw-authoring-cli` with the
-  same `execute_query`-not-`sqlcmd` `tool-calls` grader plus a Layer-2 program verifier, replacing the
-  skill's previous Vally-eval exemption.
-- **`tests/evals/_graders/sqldw-authoring-cli/verify-eval-smoke-orders-table.ps1`** -- Layer-2 program
-  verifier that confirms the authoring stimulus actually created the target table via the MCP path.
 - **`skills/eventschemaset-consumption-cli`** -- new read-only skill to list, inspect, and describe Microsoft Fabric Event Schema Sets via the Fabric Items REST API (`az rest` + `jq`): enumerate Event Schema Sets in a workspace, read item properties (OneLake root path, sensitivity label, tags), and retrieve then base64-decode the item definition to summarize its `eventTypes` and `schemas`.
 - **`activator-authoring-cli` and `activator-consumption-cli`** -- create and inspect alerts backed by Power BI reports and semantic models, including validated metric queries, personalized filters, and explicit handling of the current public readback limitation.
 
@@ -97,7 +78,6 @@ User-facing changes for the public Microsoft Fabric Skills release.
   fallback. The Fabric SQL Endpoint MCP server (`fabric-sqlendpoint`) ships headerless in the
   consumption/authoring/operations plugins and authenticates lazily via Copilot's native session.
 - **`skills/semantic-model-authoring`** -- Added a metadata-discovery capability using DAX `INFO` functions (new `references/metadata-discovery.md` + `Discover Semantic Model Metadata` workflow). 
-- **`tests/evals/semantic-model-authoring/eval.yaml`** -- Added an `INFO`-function metadata-discovery stimulus, ported from the `semantic-model-consumption` discovery coverage.
 
 ### Removed
 - **`skills/semantic-model-consumption`** -- Removed. Its capabilities are now split between two skills: semantic-model metadata discovery (DAX `INFO` functions) moved into `semantic-model-authoring`, and natural-language data queries are handled by `fabriciq`.
@@ -177,7 +157,7 @@ User-facing changes for the public Microsoft Fabric Skills release.
 - **Eventstream skills enhanced** (`eventstream-authoring-cli`, `eventstream-consumption-cli`; both shipped in v0.3.5) -- SKILL.md, core-reference, and API-endpoint refinements detailed below.
 - **`eventstream-consumption-cli` — Custom Endpoint connection string retrieval recipe.** New "Get Custom Endpoint Connection String" section with full `az rest` CLI recipes (bash + PowerShell) showing the 2-step Topology API workflow: get topology → get source connection. Includes security guidance, multi-source disambiguation, Kafka producer config table, and MUST DO rule.
 - **`EVENTSTREAM-AUTHORING-CORE.md` — Eventhouse ingestion modes guidance.** Added ProcessedIngestion as recommended API-automatable path with full example, DirectIngestion warning documenting the known UI-only data connection limitation, cross-skill collaboration pattern table, and CDC bracket-escaping fix.
-- **Corrected Eventstream Definition API endpoints** -- All SKILL.md code blocks and eval Layer 1 regex assertions updated from unsupported `GET .../definition` / `PUT .../definition` to the official `POST .../getDefinition` / `POST .../updateDefinition` per Microsoft Learn docs.
+- **Corrected Eventstream Definition API endpoints** -- All SKILL.md code blocks updated from unsupported `GET .../definition` / `PUT .../definition` to the official `POST .../getDefinition` / `POST .../updateDefinition` per Microsoft Learn docs.
 - **`skills/search-consumption-cli`** -- reworked the skill description and triggers to lead with catalog-search framing ("search for an item", "search the catalog", "catalog search") and dropped discovery-verb-only triggers that did not reliably route to it. The skill now activates for cross-tenant "search the catalog for an item" requests, which is its actual purpose (the Fabric Catalog Search API). Reconciled the troubleshooting note on indexing lag (variable, not yet near-real-time; not a fixed ~24h).
 
 ### Fixed
@@ -186,7 +166,7 @@ User-facing changes for the public Microsoft Fabric Skills release.
 ## [0.3.5] - 2026-06-25
 
 ### Added
-- **New skills `fabriciq-ontology-authoring-cli` and `fabriciq-ontology-consumption-cli`** — Fabric IQ Ontology (preview) support from the CLI. `fabriciq-ontology-authoring-cli` creates and evolves Ontology items (entity types, properties incl. timeseries, relationship types, and bindings to OneLake lakehouse or Eventhouse / KQL tables) via the Fabric item-definition REST API with a mandatory Preview & Confirm gate before any LRO write. `fabriciq-ontology-consumption-cli` reads Ontology items to produce agent grounding context and routes ontology-backed data queries by binding type to the matching per-datasource consumption skill (`eventhouse-consumption-cli`, `spark-consumption-cli`, `sqldw-consumption-cli`). Adds per-skill `references/` (including a shared ontology schema reference bundled into each skill), routing tests, integration evals, and full-eval plans.
+- **New skills `fabriciq-ontology-authoring-cli` and `fabriciq-ontology-consumption-cli`** — Fabric IQ Ontology (preview) support from the CLI. `fabriciq-ontology-authoring-cli` creates and evolves Ontology items (entity types, properties incl. timeseries, relationship types, and bindings to OneLake lakehouse or Eventhouse / KQL tables) via the Fabric item-definition REST API with a mandatory Preview & Confirm gate before any LRO write. `fabriciq-ontology-consumption-cli` reads Ontology items to produce agent grounding context and routes ontology-backed data queries by binding type to the matching per-datasource consumption skill (`eventhouse-consumption-cli`, `spark-consumption-cli`, `sqldw-consumption-cli`). Adds per-skill `references/` (including a shared ontology schema reference bundled into each skill).
 - **New skill: `mlv-operations-cli`** -- Manage Materialized Lake View (MLV) refresh schedules and job execution via Fabric REST APIs. Provides scheduling and monitoring operations (9 endpoints):
   - **Schedule Management**: Create/list/update/delete refresh schedules (Cron, Daily, Weekly, Monthly)
   - **Job Execution**: Trigger on-demand refreshes, monitor job status/history, cancel running jobs
