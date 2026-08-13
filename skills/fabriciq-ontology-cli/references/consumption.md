@@ -94,8 +94,8 @@ The full fetch-and-decode flow for this mode (LRO capture + part decode + tree r
 Running the data query itself (KQL / Spark SQL / T-SQL) uses the connection patterns owned by the sibling consumption skills:
 
 - **Eventhouse** (`KustoTable` bindings) → [EVENTHOUSE-CONSUMPTION-CORE.md § Connection Fundamentals](../../../common/EVENTHOUSE-CONSUMPTION-CORE.md#connection-fundamentals) + `eventhouse-cli`
-- **Lakehouse** (`LakehouseTable` bindings) → `sqldw-consumption-cli` (default, SQL analytics endpoint) or `spark-consumption-cli` (only when user explicitly wants PySpark / DataFrame work)
-- **Warehouse bindings** → ❓ not documented in the current shared ontology schema (`LakehouseTable` and `KustoTable` only); if encountered, surface to user rather than silently assuming `sqldw-consumption-cli`
+- **Lakehouse** (`LakehouseTable` bindings) → `sqldw-cli` (default, SQL analytics endpoint) or `spark-cli` (only when user explicitly wants PySpark / DataFrame work)
+- **Warehouse bindings** → ❓ not documented in the current shared ontology schema (`LakehouseTable` and `KustoTable` only); if encountered, surface to user rather than silently assuming `sqldw-cli`
 
 The `clusterUri`, `databaseName`, `workspaceId`, and `itemId` your delegate needs are all already inside the decoded binding payload — do **not** rediscover them via the item APIs.
 
@@ -111,8 +111,8 @@ The `clusterUri`, `databaseName`, `workspaceId`, and `itemId` your delegate need
 | Produce an LLM-facing grounding JSON | ✅ | — |
 | Decode the full definition tree for diff / review | ✅ | — |
 | Query ontology-backed **data** in an Eventhouse | Route | `eventhouse-cli` |
-| Query ontology-backed **data** in a Lakehouse via SQL endpoint (default) | Route | `sqldw-consumption-cli` |
-| Query ontology-backed **data** in a Lakehouse via Spark (explicit Spark ask only) | Route | `spark-consumption-cli` |
+| Query ontology-backed **data** in a Lakehouse via SQL endpoint (default) | Route | `sqldw-cli` |
+| Query ontology-backed **data** in a Lakehouse via Spark (explicit Spark ask only) | Route | `spark-cli` |
 | Query ontology-backed **data** in a Warehouse | Surface (❓ binding shape not in shared schema) | — |
 | Create / alter / rebind entity types / relationships | ❌ | `fabriciq-ontology-cli` authoring mode |
 | Refresh an ontology's indexed state | ❌ | Not in preview CLI scope |
@@ -152,11 +152,11 @@ Deep recipe + per-skill invocation templates: [routing.md](consumption/routing.m
 
 | Binding source kind | `dataBindingType` | Delegate (default / alternate) | Query shape |
 |---|---|---|---|
-| `LakehouseTable` | `NonTimeSeries` | `sqldw-consumption-cli` (default, SQL endpoint) — `spark-consumption-cli` only when user explicitly wants PySpark / DataFrames | `SELECT <propertyColumns> FROM <schema>.<sourceTableName> WHERE <keyColumn> = <value>` |
-| `LakehouseTable` | `TimeSeries` | `sqldw-consumption-cli` (default) — `spark-consumption-cli` for Spark-only features | `SELECT ..., <timestampColumn> FROM <schema>.<sourceTableName> WHERE <keyColumn> = <v> AND <timestampColumn> >= DATEADD(hour,-1,SYSUTCDATETIME())` |
+| `LakehouseTable` | `NonTimeSeries` | `sqldw-cli` (default, SQL endpoint) — `spark-cli` only when user explicitly wants PySpark / DataFrames | `SELECT <propertyColumns> FROM <schema>.<sourceTableName> WHERE <keyColumn> = <value>` |
+| `LakehouseTable` | `TimeSeries` | `sqldw-cli` (default) — `spark-cli` for Spark-only features | `SELECT ..., <timestampColumn> FROM <schema>.<sourceTableName> WHERE <keyColumn> = <v> AND <timestampColumn> >= DATEADD(hour,-1,SYSUTCDATETIME())` |
 | `KustoTable` | `TimeSeries` | `eventhouse-cli` | `<sourceTableName> \| where <keyColumn> == "<v>" \| where <timestampColumn> > ago(1h) \| project <propertyColumns>` |
 | `KustoTable` | `NonTimeSeries` | **Invalid** — preview forbids this | Reject and tell the user the ontology is mis-bound |
-| Any relationship contextualization | — | `sqldw-consumption-cli` (default; linking tables are Lakehouse, joins cleaner in T-SQL) — `spark-consumption-cli` alternate | `SELECT <targetKeyColumns> FROM <linkTable> WHERE <sourceKeyColumns> = <source-values>` then join target-side bindings in a follow-up call |
+| Any relationship contextualization | — | `sqldw-cli` (default; linking tables are Lakehouse, joins cleaner in T-SQL) — `spark-cli` alternate | `SELECT <targetKeyColumns> FROM <linkTable> WHERE <sourceKeyColumns> = <source-values>` then join target-side bindings in a follow-up call |
 
 **Invocation contract when handing off** — this skill resolves the source metadata and **composes the query in the target dialect**, then hands both to the delegate. The delegate (sibling skill) owns the actual connection + execution.
 
@@ -213,7 +213,7 @@ Deep recipe + per-skill invocation templates: [routing.md](consumption/routing.m
 | `definition.parts[]` is empty | The item was created but no entity types were added. Tell the user and suggest switching to the `fabriciq-ontology-cli` authoring mode first. |
 | Downstream KQL returns 0 rows but source table has data | Check the binding's `sourceTableName` casing and that `clusterUri` / `databaseName` in the binding match the live cluster. Casing mismatches cause silent empty results. |
 | `SELECT <propertyName>` fails with "invalid column" | You passed an ontology property name, not a source column name. Remap via `propertyBindings[].sourceColumnName`. |
-| Relationship traversal returns unexpectedly few rows | Contextualization's `sourceTableName` (Lakehouse linking table) may be empty or stale; inspect via `sqldw-consumption-cli` before blaming the ontology. |
+| Relationship traversal returns unexpectedly few rows | Contextualization's `sourceTableName` (Lakehouse linking table) may be empty or stale; inspect via `sqldw-cli` before blaming the ontology. |
 | Mismatched `itemId` / `clusterUri` between binding and live Eventhouse | The backing Eventhouse was recreated; the ontology needs an authoring update. Switch to the `fabriciq-ontology-cli` authoring mode. |
 | Base64 decode produces binary junk | Part payload was not `InlineBase64`; check `payloadType`. If it's `VsixPackage` or an unknown kind, skip and warn. |
 
@@ -293,7 +293,7 @@ Contextualization: LakehouseTable "HubAircraftAssignment" with (AirlineId, TailN
 
 User intent: "which aircraft does Airline 'ZA' operate and what's their latest reading?"
 
-Step 1: sqldw-consumption-cli → SELECT TailNumber FROM HubAircraftAssignment WHERE AirlineId = 'ZA'
+Step 1: sqldw-cli → SELECT TailNumber FROM HubAircraftAssignment WHERE AirlineId = 'ZA'
 Step 2: eventhouse-cli → AircraftReadings | where AssetId in (<TankIds>) | summarize arg_max(PreciseTimestamp, *) by AssetId
 Step 3: Merge results in the agent; present with ontology-level column names.
 ```
@@ -325,7 +325,7 @@ End-to-end worked examples (enumerate an ontology → build grounding JSON → r
 
 - This mode is **read-only** on the ontology item. All authoring operations (create, alter, rebind, rename) belong to the **`fabriciq-ontology-cli` authoring mode**.
 - This skill **does not execute data queries itself**. It produces grounding context and a routing decision; the actual source query runs inside the per-datasource consumption skill you delegate to.
-- Supported downstream skills (preview): **`eventhouse-cli`**, **`spark-consumption-cli`**, **`sqldw-consumption-cli`**. A standalone graph consumption skill does **not** yet exist — if the user asks for a graph-shaped query over relationships, surface that limitation and fall back to per-edge joins via Lakehouse / SQL.
+- Supported downstream skills (preview): **`eventhouse-cli`**, **`spark-cli`**, **`sqldw-cli`**. A standalone graph consumption skill does **not** yet exist — if the user asks for a graph-shaped query over relationships, surface that limitation and fall back to per-edge joins via Lakehouse / SQL.
 - Orchestrator agents should hand this skill the **workspace name / ID** and the **ontology display name / ID**; it will return a grounding JSON they can reuse for subsequent delegate calls without re-fetching the definition.
 - When authoring activity is suspected mid-session (for example, the user switches to authoring mode and then comes back to query), **re-run the grounding pass** — the cached definition is stale.
 - If a **Fabric KQL MCP server** is configured in the user's environment, it can substitute for `az rest` on the Eventhouse delegate leg. The repo's default `mcp-setup/mcp-config-template.json` does **not** register a `fabric-kql` server, so do not assume that name exists. Either way it does **not** cover ontology control-plane calls, so the fetch / grounding step still uses `az rest`.

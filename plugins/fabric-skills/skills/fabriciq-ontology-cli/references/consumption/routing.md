@@ -10,11 +10,11 @@ See [ONTOLOGY-AUTHORING-CORE.md § DataBinding file](../authoring/ONTOLOGY-AUTHO
 
 | `source.kind` | `dataBindingType` | Default delegate | Alternate | Query language | Notes |
 |---|---|---|---|---|---|
-| `LakehouseTable` | `NonTimeSeries` | `sqldw-consumption-cli` (SQL endpoint) | `spark-consumption-cli` | T-SQL (default) or Spark SQL | Static attributes. SQL is default — Spark only when user explicitly wants PySpark / DataFrame work. |
-| `LakehouseTable` | `TimeSeries` | `sqldw-consumption-cli` (SQL endpoint) | `spark-consumption-cli` | T-SQL (default) or Spark SQL | Requires `WHERE <timestampColumn> >= <from>`. Use Spark only for Spark-specific features (MLlib, DataFrames). |
+| `LakehouseTable` | `NonTimeSeries` | `sqldw-cli` (SQL endpoint) | `spark-cli` | T-SQL (default) or Spark SQL | Static attributes. SQL is default — Spark only when user explicitly wants PySpark / DataFrame work. |
+| `LakehouseTable` | `TimeSeries` | `sqldw-cli` (SQL endpoint) | `spark-cli` | T-SQL (default) or Spark SQL | Requires `WHERE <timestampColumn> >= <from>`. Use Spark only for Spark-specific features (MLlib, DataFrames). |
 | `KustoTable` | `TimeSeries` | `eventhouse-cli` | — | KQL | Requires `\| where <timestampColumn> > ago(…)`. |
 | `KustoTable` | `NonTimeSeries` | **Invalid** — preview rejects | — | — | Surface to the user; the ontology is mis-authored. Switch to `fabriciq-ontology-cli` authoring mode. |
-| Relationship contextualization | n/a (always `LakehouseTable`) | `sqldw-consumption-cli` (SQL endpoint) | `spark-consumption-cli` | T-SQL or Spark SQL | Linking tables are Lakehouse-only today. |
+| Relationship contextualization | n/a (always `LakehouseTable`) | `sqldw-cli` (SQL endpoint) | `spark-cli` | T-SQL or Spark SQL | Linking tables are Lakehouse-only today. |
 
 > ❓ **Warehouse bindings:** the shared ontology schema in [ONTOLOGY-AUTHORING-CORE.md § DataBinding file](../authoring/ONTOLOGY-AUTHORING-CORE.md#databinding-file--entitytypesiddatabindingsguidjson) documents **only** `LakehouseTable` and `KustoTable` as `source.type` values. If you see a Warehouse-specific binding variant in the wild, surface it to the user and flag for authoring-guide update — do not silently assume it is spellable as `LakehouseTable`.
 
@@ -46,7 +46,7 @@ AircraftReadings                                    // source.sourceTableName
 | project PreciseTimestamp, Temp_C              // propertyBindings sourceColumns
 ```
 
-### Lakehouse (`LakehouseTable`) → `sqldw-consumption-cli` (default) **or** `spark-consumption-cli`
+### Lakehouse (`LakehouseTable`) → `sqldw-cli` (default) **or** `spark-cli`
 
 | Delegate input | Source in grounding JSON |
 |---|---|
@@ -58,7 +58,7 @@ AircraftReadings                                    // source.sourceTableName
 | Projected columns | `propertyBindings[].sourceColumnName` |
 | Timestamp column (only when `TimeSeries`) | `timestampColumnName` |
 
-Example T-SQL (default dialect for `sqldw-consumption-cli`):
+Example T-SQL (default dialect for `sqldw-cli`):
 
 ```sql
 SELECT TOP 100 AssetId, Manufacturer, InstalledOn
@@ -75,7 +75,7 @@ WHERE  AssetId   = 'N42ZA'
   AND  EventTime >= DATEADD(hour, -1, SYSUTCDATETIME());
 ```
 
-Equivalent **Spark SQL** (when delegating to `spark-consumption-cli` — do **not** mix T-SQL `DATEADD` / `SYSUTCDATETIME` into Spark):
+Equivalent **Spark SQL** (when delegating to `spark-cli` — do **not** mix T-SQL `DATEADD` / `SYSUTCDATETIME` into Spark):
 
 ```sql
 SELECT AssetId, EventTime, Temp_C
@@ -84,7 +84,7 @@ WHERE  AssetId   = 'N42ZA'
   AND  EventTime >= current_timestamp() - INTERVAL 1 HOUR
 ```
 
-### Relationship contextualization → `sqldw-consumption-cli` (default)
+### Relationship contextualization → `sqldw-cli` (default)
 
 Contextualizations are always `LakehouseTable` with a **linking table**. Keys can be **composite** — both `sourceKeyRefBindings[]` and `targetKeyRefBindings[]` are arrays in the ontology schema, so join on **every** entry. SQL endpoint is the default; joins compose more cleanly in T-SQL than Spark SQL through `az rest`.
 
@@ -124,7 +124,7 @@ Follow-up calls join to per-entity bindings (often across different source kinds
 A common ontology has **Entity A** on Lakehouse, **Entity B** on Eventhouse, and a `LakehouseTable` contextualization linking them. A single delegate cannot join across source kinds. The routing pattern is:
 
 ```text
-1.  Hit sqldw-consumption-cli (or spark-consumption-cli) on the linking table.
+1.  Hit sqldw-cli (or spark-cli) on the linking table.
       → returns [target keys]
 2.  Hit eventhouse-cli with `where <targetKey> in (...)`.
       → returns the timeseries rows
@@ -160,7 +160,7 @@ COMPOSED_KQL="AircraftReadings | where AssetId == 'N42ZA' | where PreciseTimesta
 # Handoff → eventhouse-cli runs this KQL via its own az rest wiring.
 ```
 
-### SQL endpoint delegate (`sqldw-consumption-cli`) — default for Lakehouse
+### SQL endpoint delegate (`sqldw-cli`) — default for Lakehouse
 
 Hand off:
 - **Connection**: `workspaceId`, `itemId` (lakehouse), `sourceSchema` (typically `dbo`).
@@ -170,10 +170,10 @@ Hand off:
 WS_ID="<binding.source.workspaceId>"
 ITEM_ID="<binding.source.itemId>"          # lakehouse ID
 COMPOSED_TSQL="SELECT TOP 100 AssetId, Manufacturer FROM dbo.Aircrafts WHERE Manufacturer = 'Contoso'"
-# Handoff → sqldw-consumption-cli runs this T-SQL via its own endpoint wiring.
+# Handoff → sqldw-cli runs this T-SQL via its own endpoint wiring.
 ```
 
-### Spark delegate (`spark-consumption-cli`) — alternate for Lakehouse
+### Spark delegate (`spark-cli`) — alternate for Lakehouse
 
 Hand off:
 - **Connection**: `workspaceId`, `itemId`, `sourceSchema`.
@@ -183,7 +183,7 @@ Hand off:
 WS_ID="<binding.source.workspaceId>"
 ITEM_ID="<binding.source.itemId>"
 COMPOSED_SPARKSQL="SELECT AssetId, EventTime, Temp_C FROM dbo.AircraftReadings WHERE AssetId = 'N42ZA' AND EventTime >= current_timestamp() - INTERVAL 1 HOUR"
-# Handoff → spark-consumption-cli runs this Spark SQL.
+# Handoff → spark-cli runs this Spark SQL.
 ```
 
 ---
@@ -215,7 +215,7 @@ COMPOSED_SPARKSQL="SELECT AssetId, EventTime, Temp_C FROM dbo.AircraftReadings W
 | Delegate times out | Missing time filter on `TimeSeries` | Add `where <timestampColumnName> > ago(…)` / `>= DATEADD(...)`, retry |
 | Delegate returns auth error (401 / 403) | Wrong `--resource` audience or missing source-item role | Check the delegate's own connection contract (EH: `https://kusto.kusto.windows.net`; Spark: Fabric token; SQL: Fabric token) |
 | `KustoTable` + `NonTimeSeries` encountered | Mis-authored ontology | Refuse; surface as authoring bug |
-| Contextualization source table empty | Linking table has no rows yet | Surface to user; suggest inspecting via `sqldw-consumption-cli` before re-running the relationship query |
+| Contextualization source table empty | Linking table has no rows yet | Surface to user; suggest inspecting via `sqldw-cli` before re-running the relationship query |
 
 ---
 

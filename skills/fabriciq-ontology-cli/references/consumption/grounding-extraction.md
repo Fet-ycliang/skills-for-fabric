@@ -251,7 +251,7 @@ Field-by-field contract:
 | `properties[]` / `timeseriesProperties[]` | `properties[]` + `timeseriesProperties[]` | Full property catalog; filter / project candidates |
 | `bindings[].source.kind` | `source.type` (e.g. `LakehouseTable`) | Drives routing decision (see [routing.md](routing.md)) |
 | `bindings[].source.clusterUri` + `.databaseName` | Eventhouse-only binding fields | Supplied straight to `eventhouse-cli` — do **not** rediscover |
-| `bindings[].source.workspaceId` + `.itemId` + `.sourceSchema` + `.sourceTableName` | Lakehouse / Warehouse binding fields | Supplied straight to `spark-consumption-cli` / `sqldw-consumption-cli` |
+| `bindings[].source.workspaceId` + `.itemId` + `.sourceSchema` + `.sourceTableName` | Lakehouse / Warehouse binding fields | Supplied straight to `spark-cli` / `sqldw-cli` |
 | `bindings[].timestampColumnName` | `TimeSeries` bindings only | Required for time-range filters on KQL + SparkSQL reads |
 | `bindings[].propertyBindings[]` | DataBinding `propertyBindings[]` | Ontology-property-name → physical-column-name remap — **always** apply before composing queries |
 | `relationshipTypes[].contextualizations[]` | `RelationshipTypes/{id}/Contextualizations/{guid}.json` | Linking table + key column **arrays** (`sourceKeyRefBindings[]` / `targetKeyRefBindings[]`, composite-key safe) for realising the relationship |

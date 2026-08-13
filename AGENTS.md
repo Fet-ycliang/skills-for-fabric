@@ -1,6 +1,6 @@
 # Microsoft Fabric Development Agent
 
-> **Update Check**: At session start, check for skills-for-fabric updates by reading the remote `package.json` version from `https://github.com/microsoft/skills-for-fabric` (via `git fetch origin main --quiet && git show origin/main:package.json` or GitHub API with authentication) and comparing with the local `package.json` version. Show changelog if update available.
+> **Updates**: These instructions do not run a session-start update check. Refresh them through your host's plugin or marketplace update flow, or run `git pull` if you use a manual clone.
 
 You are an AI assistant specialized in Microsoft Fabric development.
 
@@ -46,6 +46,7 @@ Fabric REST APIs: https://learn.microsoft.com/en-us/rest/api/fabric/articles/
 | Power BI Reports | https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-report |
 | Data Agents | https://learn.microsoft.com/en-us/fabric/data-science/concept-data-agent |
 | Data Agent Evaluation | https://learn.microsoft.com/en-us/fabric/data-science/fabric-data-agent-sdk |
+| Variable Library | https://learn.microsoft.com/en-us/fabric/cicd/variable-library/variable-library-overview |
 
 ## Key Patterns
 
@@ -53,8 +54,7 @@ Fabric REST APIs: https://learn.microsoft.com/en-us/rest/api/fabric/articles/
 - Use Medallion architecture: Bronze (raw) → Silver (cleaned) → Gold (aggregated)
 - Lakehouse for data engineering, Warehouse for SQL analytics
 - Delta Lake format for all Lakehouse tables
-- For Materialized Lake View SQL authoring and incremental refresh optimization, use `skills/spark-authoring-cli/SKILL.md` and its MLV resource documents.
-- For MLV refresh scheduling, job monitoring, and cancellation, use `skills/mlv-operations-cli/SKILL.md`.
+- Use `skills/spark-cli/SKILL.md` for notebook authoring and runs, Livy analysis, Spark diagnostics, and the full Materialized Lake View lifecycle.
 
 ### Development
 - PySpark with mssparkutils for notebooks
@@ -70,13 +70,14 @@ Fabric REST APIs: https://learn.microsoft.com/en-us/rest/api/fabric/articles/
 - Power BI report design skill: `skills/powerbi-report-design/SKILL.md` — archetype routing, layout, theme, accessibility
 - Power BI report authoring skill: `skills/powerbi-report-authoring/SKILL.md` — PBIR/PBIP file mechanics, Desktop reload/screenshot
 - Power BI report management skill: `skills/powerbi-report-management/SKILL.md` — Fabric report item CRUD via `az rest`
-- Spark operations skill: `skills/spark-operations-cli/SKILL.md` — read-only triage for failed jobs, stuck sessions, performance bottlenecks
+- Spark skill: `skills/spark-cli/SKILL.md` — notebook authoring and runs, Livy analysis, read-only diagnostics, and MLV lifecycle operations
+- Variable Library (CI/CD): parameterize workspaces across environments — author definitions, value sets, and active value set item state, and wire consumers to Variable Library references (see `skills/variable-library-cli/SKILL.md`)
 
 ### Operations
 - REST APIs for programmatic management
 - Pipelines for orchestration
 - Parameterize everything for reusability
-- Warehouse operations skill: `skills/sqldw-operations-cli/SKILL.md` — performance diagnostics, slow queries, query insights
+- Warehouse operations skill: `skills/sqldw-cli/SKILL.md` — performance diagnostics, slow queries, query insights
 - Azure Monitor observability operations skill: `skills/azmon-mirroredcatalogs-operations-cli/SKILL.md` — onboard Azure Monitor / App Insights / Log Analytics observability data into Fabric and correlate telemetry with business data for business-impact insights, an optional Real-Time (KQL) dashboard, and opt-in Operations Agent instructions
 
 ### Git Integration (ALM / CI-CD)
@@ -102,7 +103,7 @@ Fabric REST APIs: https://learn.microsoft.com/en-us/rest/api/fabric/articles/
 - Authoring skill: `skills/deployment-pipelines-authoring-cli/SKILL.md` — create deployment pipelines and stages, assign/unassign workspaces, and deploy stage content (dev→test→prod) as a long-running operation via the Fabric core REST API (`/v1/deploymentPipelines`)
 
 ### Event Schema Set (Real-Time Intelligence)
-- Consumption skill: `skills/eventschemaset-consumption-cli/SKILL.md` — read-only discovery, inspection, and definition decoding of Event Schema Sets (catalogs of `eventTypes` and message `schemas`) via `az rest` against the Fabric Items REST API (`.../eventSchemaSets`)
+- Unified skill: `skills/eventschemaset-cli/SKILL.md` — select its authoring or consumption mode by intent: authoring mode creates, updates (properties and definition override), and deletes Event Schema Sets (catalogs of `eventTypes` and message `schemas`) via `az rest` against the Fabric Items REST API (`.../eventSchemaSets`); consumption mode does read-only discovery, inspection, and definition decoding
 
 ## Constraints
 

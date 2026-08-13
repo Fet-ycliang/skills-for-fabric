@@ -56,7 +56,7 @@ Expected shape of step 3:
 
 ---
 
-## Example 2 — Route a non-timeseries read to `sqldw-consumption-cli` (default)
+## Example 2 — Route a non-timeseries read to `sqldw-cli` (default)
 
 > User intent: "list all aircraft manufactured by Contoso." Entity type `Aircraft` has a `NonTimeSeries` binding against Lakehouse `dbo.Aircrafts`. **Default route is SQL endpoint**; route to Spark only on explicit user preference.
 
@@ -87,7 +87,7 @@ FROM   dbo.Aircrafts
 WHERE  Manufacturer = 'Contoso';
 ```
 
-Hand off to `sqldw-consumption-cli` with resolved `{ workspaceId, itemId, sourceSchema="dbo" }` and the composed T-SQL string.
+Hand off to `sqldw-cli` with resolved `{ workspaceId, itemId, sourceSchema="dbo" }` and the composed T-SQL string.
 
 ### Spark alternate (only when user explicitly wants Spark)
 
@@ -99,7 +99,7 @@ WHERE  Manufacturer = 'Contoso'
 LIMIT  100
 ```
 
-Hand off to `spark-consumption-cli` with the same resolved connection + this Spark SQL string.
+Hand off to `spark-cli` with the same resolved connection + this Spark SQL string.
 
 ---
 
@@ -157,7 +157,7 @@ Delegate payload:
 ### Step 1 — Lakehouse: list aircraft keys for `AC`
 
 ```sql
--- Delegated to sqldw-consumption-cli (Lakehouse SQL endpoint)
+-- Delegated to sqldw-cli (Lakehouse SQL endpoint)
 SELECT DISTINCT TailNumber
 FROM   dbo.HubAircraftAssignment
 WHERE  AirlineId = 'AC'
