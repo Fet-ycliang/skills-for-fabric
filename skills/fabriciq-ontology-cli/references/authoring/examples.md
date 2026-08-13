@@ -13,7 +13,7 @@ Before composing bindings, discover the source table schemas to avoid hallucinat
 ### Lakehouse table columns
 
 ```sql
--- FASTEST: Use the sqldw-consumption-cli skill to query the lakehouse SQL endpoint
+-- FASTEST: Use the sqldw-cli skill to query the lakehouse SQL endpoint
 -- This returns ALL tables and columns in one query:
 SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE
 FROM INFORMATION_SCHEMA.COLUMNS

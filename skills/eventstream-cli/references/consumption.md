@@ -262,7 +262,7 @@ Decode `eventstreamProperties.json` and check:
 - Do NOT hardcode workspace or item IDs — always discover them via the API
 - Do NOT assume all source types appear in API enums — preview sources exist only in the UI
 - Do NOT modify Eventstream topology with this consumption skill — use `eventstream-cli authoring mode` for writes
-- Do NOT attempt to query event data through the Eventstream API — use downstream skills (`eventhouse-cli` consumption mode, `sqldw-consumption-cli`) for querying landed data
+- Do NOT attempt to query event data through the Eventstream API — use downstream skills (`eventhouse-cli` consumption mode, `sqldw-cli`) for querying landed data
 
 ---
 

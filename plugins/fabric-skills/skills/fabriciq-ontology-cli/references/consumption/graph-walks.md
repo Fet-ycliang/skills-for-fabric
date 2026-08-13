@@ -113,7 +113,7 @@ Grounding JSON has been fetched (see [grounding-extraction.md](grounding-extract
 WS_ID="<workspace-guid>"           # from grounding
 LH_ID="<lakehouse-guid>"           # from grounding (binding.source.itemId)
 
-# Delegate this read to sqldw-consumption-cli (Lakehouse SQL endpoint default) and run:
+# Delegate this read to sqldw-cli (Lakehouse SQL endpoint default) and run:
 #   SELECT TOP 1 * FROM dbo.panels WHERE id = 'panel7';
 ```
 
@@ -213,6 +213,6 @@ Re-enter at step 2 using the **set of neighbors found in the previous hop** as t
 ## Composing With Other Skills
 
 - **Anchor lookup ambiguity** ("show me everything for Panel 7") → ground first via [grounding-extraction.md](grounding-extraction.md), confirm `Panel.PanelId == "panel7"` is the intended interpretation.
-- **Each linking-table / entity-table read** → delegate to `sqldw-consumption-cli` (default) or `spark-consumption-cli` per [routing.md § Lakehouse](routing.md#lakehouse-lakehousetable--sqldw-consumption-cli-default-or-spark-consumption-cli).
+- **Each linking-table / entity-table read** → delegate to `sqldw-cli` (default) or `spark-cli` per [routing.md § Lakehouse](routing.md#lakehouse-lakehousetable--sqldw-cli-default-or-spark-cli).
 - **Each KustoTable telemetry sweep** → delegate to `eventhouse-cli` per [routing.md § Eventhouse](routing.md#eventhouse-kustotable--timeseries--eventhouse-cli).
 - **Schema gaps surfaced during walk** (missing relationship, mis-typed binding) → switch to `fabriciq-ontology-cli` authoring mode; do not patch in-flight.

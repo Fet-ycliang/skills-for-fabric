@@ -123,7 +123,7 @@ For the generic `kqlDatabases` listing call (pagination + JMESPath filter by `di
 
 Before composing bindings, discover the source table schemas so you map the correct column names. **Use companion skills for schema discovery** — they are faster and more reliable than raw REST calls.
 
-- **Lakehouse tables** → route to the `sqldw-consumption-cli` skill and query `INFORMATION_SCHEMA.COLUMNS` against the lakehouse SQL endpoint (returns all tables + columns in one query). If unavailable, fall back to the Fabric Tables REST API plus the OneLake Table API for Iceberg metadata.
+- **Lakehouse tables** → route to the `sqldw-cli` skill and query `INFORMATION_SCHEMA.COLUMNS` against the lakehouse SQL endpoint (returns all tables + columns in one query). If unavailable, fall back to the Fabric Tables REST API plus the OneLake Table API for Iceberg metadata.
 - **Eventhouse / KQL tables** → route to the `eventhouse-cli` skill and run `.show database schema as json` (returns every table + column in a single response). For a single table, use `.show table <name> schema as json`.
 
 Use the column types returned here to fill `valueType` on each `EntityTypeProperty` — see the source-column → `valueType` mapping in [ONTOLOGY-AUTHORING-CORE.md § EntityTypeProperty](authoring/ONTOLOGY-AUTHORING-CORE.md#entitytypeproperty).
@@ -348,7 +348,7 @@ When the ontology binds to **multiple data sources** (lakehouse tables + Eventho
 │  Step 1 → Fan out schema discovery (parallel):                   │
 │     ┌──────────────────────────┐  ┌────────────────────────────┐ │
 │     │ TASK A: Lakehouse schemas │  │ TASK B: Eventhouse schemas │ │
-│     │ sqldw-consumption-cli     │  │ eventhouse-cli │ │
+│     │ sqldw-cli     │  │ eventhouse-cli │ │
 │     │ or INFORMATION_SCHEMA     │  │ or .show database schema   │ │
 │     │ → all tables + columns    │  │ → all tables + columns     │ │
 │     └──────────┬───────────────┘  └──────────┬─────────────────┘ │
@@ -366,7 +366,7 @@ When the ontology binds to **multiple data sources** (lakehouse tables + Eventho
 ```
 
 **How to fan out** (agent-specific):
-- **GitHub Copilot CLI / Claude Code**: launch two background `task` agents — one for lakehouse (`sqldw-consumption-cli` or `INFORMATION_SCHEMA.COLUMNS` query), one for Eventhouse (`.show database schema as json`). Read both results when they complete.
+- **GitHub Copilot CLI / Claude Code**: launch two background `task` agents — one for lakehouse (`sqldw-cli` or `INFORMATION_SCHEMA.COLUMNS` query), one for Eventhouse (`.show database schema as json`). Read both results when they complete.
 - **Single-threaded environments**: run the two discovery queries sequentially — each is a single call, so the overhead is minimal.
 
 The merge step (Step 2) is where most authoring bugs are caught — deduplicate property names, unify `valueType` across entities, and prefix timeseries properties that collide with static ones.
@@ -381,7 +381,7 @@ Step 0 → Is the request specific? Are the entity types, keys, and lakehouse ta
          → YES → Continue.
 Step 1 → Resolve IDs: workspace, folder, lakehouse, eventhouse     [COMMON-CLI.md]
 Step 2 → Discover source schemas (parallel where possible):
-           a. Lakehouse: invoke `sqldw-consumption-cli` or query INFORMATION_SCHEMA.COLUMNS
+           a. Lakehouse: invoke `sqldw-cli` or query INFORMATION_SCHEMA.COLUMNS
            b. Eventhouse: invoke `eventhouse-cli` or run `.show database schema as json`
 Step 3 → Merge schemas: detect property name collisions + type conflicts; rename as needed
 Step 4 → If ontology exists: getDefinition → decode parts              (capture current IDs)
@@ -429,7 +429,7 @@ End-to-end worked examples (create empty ontology → add entity type + non-time
 
 - This skill is authoring-focused. Pair with a consumption skill (e.g., a Fabric Graph query skill) to validate the ontology end-to-end.
 - **Parallelize schema discovery** when the ontology binds to multiple source types:
-  - Launch a background `sqldw-consumption-cli` task for lakehouse schemas (`INFORMATION_SCHEMA.COLUMNS`) — returns all tables + columns in one query.
+  - Launch a background `sqldw-cli` task for lakehouse schemas (`INFORMATION_SCHEMA.COLUMNS`) — returns all tables + columns in one query.
   - Launch a background `eventhouse-cli` task for Eventhouse schemas (`.show database schema as json`) — returns all tables + columns in one call.
   - Both run concurrently. Merge results when both complete, then build the ontology model.
 - **Merge step is critical** — after discovery, deduplicate property names across `properties[]` and `timeseriesProperties[]`, unify `valueType` for same-named properties across entity types, and prefix collisions before building the envelope.

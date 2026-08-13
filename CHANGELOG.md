@@ -2,6 +2,32 @@
 
 User-facing changes for the public Microsoft Fabric Skills release.
 
+## [Unreleased]
+
+
+### Added
+- **`skills/variable-library-cli`** -- new Microsoft Fabric skill for Variable Library definitions, value sets, active value set item state, and VL-side consumer wiring via CLI. Covers authoring, consumption and operations as modes of one skill.
+- **Event Schema Set authoring** -- create, rename, override the definition of, and delete an Event Schema Set, alongside the existing read-only inspection.
+
+### Changed
+- **`skills/sqldw-cli`** -- `sqldw-authoring-cli`, `sqldw-consumption-cli`, and `sqldw-operations-cli` are now authoring, consumption, and operations modes of one skill. Existing capabilities and prompts remain supported; the MCP `fabric-sqlendpoint-execute_query` path remains primary, with the same Legacy CLI Fallback available when needed.
+- **`skills/eventschemaset-cli`** -- unified Event Schema Set authoring (create, rename, override definition, delete) and read-only consumption (list, inspect, decode) behind one mode-dispatching skill, via the Fabric Items REST API (`az rest` + `jq` + base64 definitions). Handles `202 Accepted` long-running operations and the Preview delegated-identity constraints, and is available in the `fabric-authoring`, `fabric-consumption`, and `fabric-skills` plugin bundles.
+- **`README.md` and `public/README.md`** -- the update-checking section is now a host-by-host table (Copilot CLI / Claude Code / Cursor, Windsurf and others) documenting how to turn on automatic updates, with the recommended `extraKnownMarketplaces` + `autoUpdate` snippet for Copilot CLI and a note that each release bumps the plugin `version` field.
+- **`compatibility/CLAUDE.md`** -- the session-start update-check directive is replaced with Claude Code's one-time third-party marketplace auto-update opt-in, plus the on-demand `claude plugin update <plugin>@fabric-collection` command and a fallback for loose (non-plugin) copies.
+- **Installation** -- the shipped bundles are now `fabric-skills` (every Fabric skill) and `powerbi-authoring` (Power BI report and semantic-model skills plus the `powerbi-modeling-mcp` server). The three retired ids remain resolvable as deprecated marketplace aliases of `fabric-skills`, so an already-installed user keeps working through `/plugin update`; the alias delivers the full union bundle rather than the former persona subset. New installs should use `fabric-skills`.
+
+### Removed
+- **`skills/sqldw-authoring-cli`**, **`skills/sqldw-consumption-cli`**, **`skills/sqldw-operations-cli`** -- superseded by the `sqldw-cli` item skill. Install `sqldw-cli` instead; it covers all three surfaces.
+- **`skills/eventschemaset-consumption-cli`** -- replaced by `skills/eventschemaset-cli`.
+- **BREAKING -- the `check-updates` skill has been removed outright** (no deprecation stub). It is gone from all five plugin bundles (`fabric-skills`, `fabric-authoring`, `fabric-consumption`, `fabric-operations`, `powerbi-authoring`), so `/fabric-skills:check-updates` and the other `<bundle>:check-updates` invocations no longer resolve. The skill did not update anything on its own initiative: it resolved the install context, compared versions, and surfaced the host's own native update command, executing it only on an unambiguous request. Both major hosts support native auto-update once configured -- GitHub Copilot CLI supports `"autoUpdate": true` on an `extraKnownMarketplaces` entry in personal user settings, while Claude Code provides a one-time **Enable auto-update** marketplace action or a managed-settings `"autoUpdate": true` option -- which makes the skill redundant at the cost of a mandatory blockquote on every skill load. On-demand updates remain available via `/plugin update` and `copilot plugin update --all`.
+- **The mandatory once-per-session "Update Check" blockquote** has been stripped from every `SKILL.md` (30 skills) and is no longer a structural requirement. This reclaims the context budget the notice consumed on every skill load, and removes the extra with-skill token overhead that previously skewed skill-ROI comparisons.
+- **`fabric-authoring`, `fabric-consumption`, `fabric-operations` plugin bundles** -- retired. Each was a strict subset of `fabric-skills` in skills, agents, and MCP servers, so every skill they carried still ships in `fabric-skills`. The persona split stopped describing a real boundary once skills merged to one skill per Fabric item: `sqldw-cli`, `sqldb-cli`, and `spark-cli` each carry authoring, consumption, and operations modes, so each appeared in all three bundles and installing `fabric-operations` shipped the full Spark authoring guidance.
+
+### Fixed
+- **`skills/spark-consumption-cli`** -- corrected simple Lakehouse SQL endpoint routing guidance to use the MCP `fabric-sqlendpoint-execute_query` path instead of the stale `sqlcmd` client name.
+
+## [0.3.12] - 2026-08-13
+
 ## [0.3.11] - 2026-08-06
 
 
