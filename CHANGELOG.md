@@ -4,6 +4,7 @@ User-facing changes for the public Microsoft Fabric Skills release.
 
 ## [Unreleased]
 
+## [0.3.12] - 2026-08-13
 
 ### Added
 - **`skills/variable-library-cli`** -- new Microsoft Fabric skill for Variable Library definitions, value sets, active value set item state, and VL-side consumer wiring via CLI. Covers authoring, consumption and operations as modes of one skill.
@@ -25,8 +26,6 @@ User-facing changes for the public Microsoft Fabric Skills release.
 
 ### Fixed
 - **`skills/spark-consumption-cli`** -- corrected simple Lakehouse SQL endpoint routing guidance to use the MCP `fabric-sqlendpoint-execute_query` path instead of the stale `sqlcmd` client name.
-
-## [0.3.12] - 2026-08-13
 
 ## [0.3.11] - 2026-08-06
 
